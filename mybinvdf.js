@@ -1,9 +1,9 @@
 // Read a null-terminated UTF-8 string from a Buffer, returning the string and
 // the number of bytes read
-function readStr(buf) {
+function readStr (buf) {
   let size = 0
 
-  while (buf.readUInt8(size++) != 0x00) continue
+  while (buf.readUInt8(size++) !== 0x00) continue
 
   let str = buf.toString('utf8', 0, size - 1)
 
@@ -11,21 +11,20 @@ function readStr(buf) {
 }
 
 // Read header and app entries from binary VDF Buffer
-function readAppInfo( data ) {
-  var buf = Buffer.from( data, "binary" );
+function readAppInfo (data) {
+  var buf = Buffer.from(data, 'binary')
   // First byte varies across installs, only the 2nd and 3rd seem consistent
-  if (buf.readUInt8(1) != 0x44 || buf.readUInt8(2) != 0x56)
-    throw new Error('Invalid file signature')
+  if (buf.readUInt8(1) !== 0x44 || buf.readUInt8(2) !== 0x56) { throw new Error('Invalid file signature') }
 
   return readAppEntries(buf.slice(8))
 }
 
 // Read a collection of app entries
-function readAppEntries(buf) {
+function readAppEntries (buf) {
   const entries = []
 
   // App entry collection is terminated by null dword
-  for (let off = 0; buf.readUInt32LE(off) != 0x00000000; ++off) {
+  for (let off = 0; buf.readUInt32LE(off) !== 0x00000000; ++off) {
     let [entry, size] = readAppEntry(buf.slice(off))
 
     entries.push(entry)
@@ -37,7 +36,7 @@ function readAppEntries(buf) {
 }
 
 // Read a single app entry, returning its id, name and key-value entries
-function readAppEntry(buf) {
+function readAppEntry (buf) {
   let off = 0
 
   const id = buf.readUInt32LE(off)
@@ -57,13 +56,13 @@ function readAppEntry(buf) {
 
 // Read a collection of key-value entries, returning the collection and bytes
 // read
-function readEntries(buf) {
+function readEntries (buf) {
   const entries = {}
 
   let off = 0
 
   // Entry collection is terminated by 0x08 byte
-  for (; buf.readUInt8(off) != 0x08;) {
+  for (; buf.readUInt8(off) !== 0x08;) {
     let [key, val, size] = readEntry(buf.slice(off))
 
     entries[key] = val
@@ -75,7 +74,7 @@ function readEntries(buf) {
 }
 
 // Read a single entry, returning the key-value pair and bytes read
-function readEntry(buf) {
+function readEntry (buf) {
   let off = 0
 
   let type = buf.readUInt8(off)
@@ -106,5 +105,5 @@ function readEntry(buf) {
 }
 
 module.exports = {
-  readAppInfo: data => readAppInfo( data ),
+  readAppInfo: data => readAppInfo(data)
 }

@@ -15,10 +15,16 @@
     "steamid": "^1.1.0"
   },
   "devDependencies": {
-    "electron": "^1.7.10"
+    "chai": "^4.1.2",
+    "chai-as-promised": "^7.1.1",
+    "mocha": "^4.1.0",
+    "snazzy": "^7.0.0",
+    "standard": "^10.0.3"
   },
   "scripts": {
     "start": "electron index.html --enable-logging",
-    "dev": "NODE_ENV='development' yarn run start"
+    "dev": "NODE_ENV='development' yarn run start",
+    "test-full": "yarn standard | snazzy && mocha test",
+    "test": "mocha test"
   }
 }
