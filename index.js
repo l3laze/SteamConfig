@@ -1,9 +1,12 @@
+'use strict'
+
 const BB = require('bluebird').Promise
 const fs = BB.promisifyAll(require('fs'))
 const path = require('path')
 const VDF = require('simple-vdf2')
 const BVDF = require('./mybinvdf.js')
 const SVDF = BB.promisifyAll(require('steam-shortcut-editor'))
+const SteamID = require('steamid')
 
 function SteamConfig () {
   this.loc = null
@@ -34,18 +37,6 @@ async function loadTextVDF (filePath) {
   }
 }
 
-/*
-  async function saveTextVDF (filePath, data) {
-  if (filePath === null) {
-    throw new Error(`null "filePath" for saveTextVDF.`)
-  } else if (!fs.existsSync(filePath)) {
-    throw new Error(`Couldn't find ${filePath} to save as text VDF (ENOENT).`)
-  } else {
-    fs.writeFileAsync(filePath, VDF.stringify(data, true))
-  }
-}
-*/
-
 async function loadBinaryVDF (filePath, btype) {
   var data
 
@@ -60,8 +51,8 @@ async function loadBinaryVDF (filePath, btype) {
   } else if (btype !== 'appinfo' && btype !== 'shortcuts') {
     throw new Error(`The format ${btype} is not currently supported.`)
   } else {
-    data = await fs.readFileAsync(filePath)
     if (btype === 'appinfo') {
+      data = await fs.readFileAsync(filePath)
       return BVDF.readAppInfo(data)
     } else if (btype === 'shortcuts') {
       data = SVDF.parseFileAsync(filePath, { autoConvertArrays: true, autoConvertBooleans: true, dateProperties: [ 'LastPlayTime' ] })
@@ -69,6 +60,22 @@ async function loadBinaryVDF (filePath, btype) {
     }
   }
 }
+
+/*
+  async function saveTextVDF (filePath, data) {
+  if (filePath === null) {
+    throw new Error(`null "filePath" for saveTextVDF.`)
+  } else if (!fs.existsSync(filePath)) {
+    throw new Error(`Couldn't find ${filePath} to save as text VDF (ENOENT).`)
+  } else {
+    fs.writeFileAsync(filePath, VDF.stringify(data, true))
+  }
+}
+*/
+
+SteamConfig.prototype.loadTextVDF = loadTextVDF
+
+SteamConfig.prototype.loadBinaryVDF = loadBinaryVDF
 
 SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
   if (typeof dir !== 'string') {
@@ -94,11 +101,16 @@ SteamConfig.prototype.loadAppinfo = async function loadAppinfo () {
   this.appinfo = await loadBinaryVDF(filePath, 'appinfo')
 }
 
-SteamConfig.prototype.loadPackageinfo = async function loadPackageinfo () {
-  var filePath = path.join(this.loc, 'appcache', 'packageinfo.vdf')
+/*
+ * Currently not supported -- need a parser for packageinfo.vdf.
+ *
 
-  this.packageinfo = await loadBinaryVDF(filePath)
-}
+  SteamConfig.prototype.loadPackageinfo = async function loadPackageinfo () {
+    var filePath = path.join(this.loc, 'appcache', 'packageinfo.vdf')
+
+    this.packageinfo = await loadBinaryVDF(filePath)
+  }
+ */
 
 SteamConfig.prototype.loadConfig = async function loadConfig () {
   var filePath = path.join(this.loc, 'config', 'config.vdf')
@@ -161,6 +173,17 @@ SteamConfig.prototype.loadShortcuts = async function loadShortcuts () {
   var filePath = path.join(this.loc, 'userdata', this.user.accountID, 'config', 'shortcuts.vdf')
 
   this.shortcuts = await loadBinaryVDF(filePath, 'shortcuts')
+}
+
+SteamConfig.prototype.setUser = function setUser () {
+  var userKeys = Object.keys(this.loginusers.users)
+
+  userKeys.forEach(function (item, index, array) {
+    if (this.loginusers.users[ item ].AccountName === this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser) {
+      Object.assign(this.user, this.loginusers.users[ item ])
+      this.user[ 'accountID' ] = ('' + new SteamID(item).accountid)
+    }
+  })
 }
 
 module.exports = SteamConfig

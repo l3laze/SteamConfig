@@ -22,9 +22,8 @@
     "standard": "^10.0.3"
   },
   "scripts": {
-    "start": "electron index.html --enable-logging",
     "dev": "NODE_ENV='development' yarn run start",
-    "test-full": "yarn standard | snazzy && mocha test",
-    "test": "mocha test"
+    "testm": "mocha test",
+    "test": "yarn standard | snazzy && mocha test"
   }
 }
