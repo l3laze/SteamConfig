@@ -2,7 +2,7 @@
 
 const SteamConfig = require('./index.js')
 
-var steam = new SteamConfig()
+let steam = new SteamConfig()
 
 async function run () {
   try {
@@ -15,10 +15,10 @@ async function run () {
     await steam.loadAppinfo()
     // await steam.loadPackageinfo();
 
-    await steam.setUser()
+    steam.setUser()
 
     if (steam.user === null) {
-      console.info(`No user associated with the Steam installation @ ${steam.loc}`)
+      console.error(`Error: No user associated with the Steam installation @ ${steam.loc}`)
       process.exit(1)
     }
 
@@ -27,7 +27,7 @@ async function run () {
     await steam.loadShortcuts()
   } catch (err) {
     console.error(err.message)
-    console.error((err.code ? err.captureStackTrace() : err.stack))
+    console.error(err.stack)
     process.exit(1)
   }
 
