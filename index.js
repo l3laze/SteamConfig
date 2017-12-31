@@ -1,9 +1,12 @@
+'use strict'
+
 const BB = require('bluebird').Promise
 const fs = BB.promisifyAll(require('fs'))
 const path = require('path')
 const VDF = require('simple-vdf2')
 const BVDF = require('./mybinvdf.js')
 const SVDF = BB.promisifyAll(require('steam-shortcut-editor'))
+const SteamID = require('steamid')
 
 function SteamConfig () {
   this.loc = null
@@ -29,8 +32,33 @@ async function loadTextVDF (filePath) {
   } else if (!fs.existsSync(filePath)) {
     throw new ReferenceError(`${filePath} does not exist (ENOENT).`)
   } else {
-    var data = '' + await fs.readFileAsync(filePath)
-    return VDF.parse(data)
+    let data = '' + await fs.readFileAsync(filePath)
+    data = await VDF.parse(data)
+    return data
+  }
+}
+
+async function loadBinaryVDF (filePath, btype) {
+  let data
+
+  if (filePath === null) {
+    throw new TypeError(`Wrong type for "filePath"; expected a string, but got a ${typeof filePath}.`)
+  } else if (!fs.existsSync(filePath)) {
+    throw new ReferenceError(`${filePath} does not exist (ENOENT).`)
+  } else if (typeof btype !== 'string') {
+    throw new TypeError(`Wrong type for "btype"; expected a string, but got a ${typeof btype}.`)
+  } else if (btype !== 'appinfo' && btype !== 'packageinfo' && btype !== 'shortcuts') {
+    throw new Error(`The format ${btype} is unknown.`)
+  } else if (btype !== 'appinfo' && btype !== 'shortcuts') {
+    throw new Error(`The format ${btype} is not currently supported.`)
+  } else {
+    if (btype === 'appinfo') {
+      data = await fs.readFileAsync(filePath)
+      data = await BVDF.readAppInfo(data)
+      return data
+    } else if (btype === 'shortcuts') {
+      return SVDF.parseFileAsync(filePath, { autoConvertArrays: true, autoConvertBooleans: true, dateProperties: [ 'LastPlayTime' ] })
+    }
   }
 }
 
@@ -46,29 +74,9 @@ async function loadTextVDF (filePath) {
 }
 */
 
-async function loadBinaryVDF (filePath, btype) {
-  var data
+SteamConfig.prototype.loadTextVDF = loadTextVDF
 
-  if (filePath === null) {
-    throw new TypeError(`Wrong type for "filePath"; expected a string, but got a ${typeof filePath}.`)
-  } else if (!fs.existsSync(filePath)) {
-    throw new ReferenceError(`${filePath} does not exist (ENOENT).`)
-  } else if (typeof btype !== 'string') {
-    throw new TypeError(`Wrong type for "btype"; expected a string, but got a ${typeof btype}.`)
-  } else if (btype !== 'appinfo' && btype !== 'packageinfo' && btype !== 'shortcuts') {
-    throw new Error(`The format ${btype} is unknown.`)
-  } else if (btype !== 'appinfo' && btype !== 'shortcuts') {
-    throw new Error(`The format ${btype} is not currently supported.`)
-  } else {
-    data = await fs.readFileAsync(filePath)
-    if (btype === 'appinfo') {
-      return BVDF.readAppInfo(data)
-    } else if (btype === 'shortcuts') {
-      data = SVDF.parseFileAsync(filePath, { autoConvertArrays: true, autoConvertBooleans: true, dateProperties: [ 'LastPlayTime' ] })
-      return data
-    }
-  }
-}
+SteamConfig.prototype.loadBinaryVDF = loadBinaryVDF
 
 SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
   if (typeof dir !== 'string') {
@@ -81,64 +89,77 @@ SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
 }
 
 SteamConfig.prototype.loadRegistryLM = async function loadRegistryLM () {
-  var filePath = path.join(this.loc, 'registry.vdf')
-  var data
+  let filePath = path.join(this.loc, 'registry.vdf')
+  let data
 
   data = await loadTextVDF(filePath)
   this.registry = data
 }
 
 SteamConfig.prototype.loadAppinfo = async function loadAppinfo () {
-  var filePath = path.join(this.loc, 'appcache', 'appinfo.vdf')
+  let filePath = path.join(this.loc, 'appcache', 'appinfo.vdf')
 
   this.appinfo = await loadBinaryVDF(filePath, 'appinfo')
 }
 
-SteamConfig.prototype.loadPackageinfo = async function loadPackageinfo () {
-  var filePath = path.join(this.loc, 'appcache', 'packageinfo.vdf')
+/*
+ * Currently not supported -- need a parser for packageinfo.vdf.
+ *
 
-  this.packageinfo = await loadBinaryVDF(filePath)
-}
+  SteamConfig.prototype.loadPackageinfo = async function loadPackageinfo () {
+    let filePath = path.join(this.loc, 'appcache', 'packageinfo.vdf')
+
+    this.packageinfo = await loadBinaryVDF(filePath)
+  }
+ */
 
 SteamConfig.prototype.loadConfig = async function loadConfig () {
-  var filePath = path.join(this.loc, 'config', 'config.vdf')
+  let filePath = path.join(this.loc, 'config', 'config.vdf')
 
   this.config = await loadTextVDF(filePath)
 }
 
 SteamConfig.prototype.loadLoginusers = async function loadLoginusers () {
-  var filePath = path.join(this.loc, 'config', 'loginusers.vdf')
+  let filePath = path.join(this.loc, 'config', 'loginusers.vdf')
 
   this.loginusers = await loadTextVDF(filePath)
 }
 
 SteamConfig.prototype.loadLibraryfolders = async function loadLibraryfolders () {
-  var filePath = path.join(this.loc, 'steamapps', 'libraryfolders.vdf')
-  var i
+  let filePath = path.join(this.loc, 'steamapps', 'libraryfolders.vdf')
+  let i
 
   this.libraryfolders = await loadTextVDF(filePath)
   this.nondefaultLibraryfolders = []
 
-  var libs = Object.keys(this.libraryfolders.LibraryFolders)
+  let libs = Object.keys(this.libraryfolders.LibraryFolders)
 
   for (i = 0; i < libs.length; i++) {
     if (libs[ i ] !== 'TimeNextStatsReport' && libs[ i ] !== 'ContentStatsID') {
-      this.nondefaultLibraryfolders.push(libs[ i ])
+      this.nondefaultLibraryfolders.push(this.libraryfolders.LibraryFolders[libs[ i ]])
     }
   }
 }
 
 SteamConfig.prototype.loadSteamapps = async function loadSteamapps () {
-  var filePath = path.join(this.loc, 'steamapps')
-  var apps
-  var files = await fs.readdirAsync(filePath)
-  var f
+  let apps
+  let x, y
+  let files = await fs.readdirAsync(path.join(this.loc, 'steamapps'))
+  let libs = []
+
+  Object.assign(libs, this.nondefaultLibraryfolders)
+
+  libs.push(this.loc)
 
   apps = []
 
-  for (f in files) {
-    if (path.extname(files[ f ]) === '.acf') {
-      apps.push(await loadTextVDF(path.join(filePath, files[ f ])))
+  for (x = 0; x < libs.length; x += 1) {
+    files = await fs.readdirAsync(path.join(libs[ x ], 'steamapps'))
+
+    for (y = 0; y < files.length; y += 1) {
+      if (path.extname(files[ y ]) === '.acf') {
+        apps.push(await loadTextVDF(path.join(libs[ x ], 'steamapps', files[ y ])))
+      }
     }
   }
 
@@ -146,21 +167,38 @@ SteamConfig.prototype.loadSteamapps = async function loadSteamapps () {
 }
 
 SteamConfig.prototype.loadSharedconfig = async function loadSharedconfig () {
-  var filePath = path.join(this.loc, 'userdata', this.user.accountID, '7', 'remote', 'sharedconfig.vdf')
+  let filePath = path.join(this.loc, 'userdata', this.user.accountID, '7', 'remote', 'sharedconfig.vdf')
 
   this.sharedconfig = await loadTextVDF(filePath)
 }
 
 SteamConfig.prototype.loadLocalconfig = async function loadLocalconfig () {
-  var filePath = path.join(this.loc, 'userdata', this.user.accountID, 'config', 'localconfig.vdf')
+  let filePath = path.join(this.loc, 'userdata', this.user.accountID, 'config', 'localconfig.vdf')
 
   this.localconfig = await loadTextVDF(filePath)
 }
 
 SteamConfig.prototype.loadShortcuts = async function loadShortcuts () {
-  var filePath = path.join(this.loc, 'userdata', this.user.accountID, 'config', 'shortcuts.vdf')
+  let filePath = path.join(this.loc, 'userdata', this.user.accountID, 'config', 'shortcuts.vdf')
 
-  this.shortcuts = await loadBinaryVDF(filePath, 'shortcuts')
+  try {
+    this.shortcuts = await loadBinaryVDF(filePath, 'shortcuts')
+  } catch (err) {
+    this.shortcuts = { shortcuts: [] }
+  }
+}
+
+SteamConfig.prototype.setUser = function setUser () {
+  let userKeys = Object.keys(this.loginusers.users)
+  let index
+
+  for (index = 0; index < userKeys.length; index += 1) {
+    if (this.loginusers.users[userKeys[ index ]].AccountName === this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser) {
+      this.user = {}
+      Object.assign(this.user, this.loginusers.users[userKeys[ index ]])
+      this.user[ 'accountID' ] = ('' + new SteamID(userKeys[ index ]).accountid)
+    }
+  }
 }
 
 module.exports = SteamConfig

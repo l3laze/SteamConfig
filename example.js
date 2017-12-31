@@ -1,7 +1,8 @@
-const SteamConfig = require('./index.js')
-const SteamID = require('steamid')
+'use strict'
 
-var steam = new SteamConfig()
+const SteamConfig = require('./index.js')
+
+let steam = new SteamConfig()
 
 async function run () {
   try {
@@ -14,10 +15,10 @@ async function run () {
     await steam.loadAppinfo()
     // await steam.loadPackageinfo();
 
-    setUser()
+    steam.setUser()
 
     if (steam.user === null) {
-      console.info(`No user associated with the Steam installation @ ${steam.loc}`)
+      console.error(`Error: No user associated with the Steam installation @ ${steam.loc}`)
       process.exit(1)
     }
 
@@ -26,7 +27,7 @@ async function run () {
     await steam.loadShortcuts()
   } catch (err) {
     console.error(err.message)
-    console.error((err.code ? err.captureStackTrace() : err.stack))
+    console.error(err.stack)
     process.exit(1)
   }
 
@@ -34,18 +35,6 @@ async function run () {
 }
 
 run()
-
-function setUser () {
-  var userKeys = Object.keys(steam.loginusers.users)
-
-  userKeys.forEach(function (item, index, array) {
-    if (steam.loginusers.users[ item ].AccountName === steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser) {
-      steam.user = {}
-      Object.assign(steam.user, steam.loginusers.users[ item ])
-      steam.user[ 'accountID' ] = ('' + new SteamID(item).accountid)
-    }
-  })
-}
 
 function logData () {
   console.info(`Install location:\t${steam.loc}`)

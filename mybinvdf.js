@@ -12,7 +12,7 @@ function readStr (buf) {
 
 // Read header and app entries from binary VDF Buffer
 function readAppInfo (data) {
-  var buf = Buffer.from(data, 'binary')
+  let buf = Buffer.from(data, 'binary')
   // First byte varies across installs, only the 2nd and 3rd seem consistent
   if (buf.readUInt8(1) !== 0x44 || buf.readUInt8(2) !== 0x56) { throw new Error('Invalid file signature') }
 
@@ -20,12 +20,12 @@ function readAppInfo (data) {
 }
 
 // Read a collection of app entries
-function readAppEntries (buf) {
+async function readAppEntries (buf) {
   const entries = []
 
   // App entry collection is terminated by null dword
   for (let off = 0; buf.readUInt32LE(off) !== 0x00000000; ++off) {
-    let [entry, size] = readAppEntry(buf.slice(off))
+    let [entry, size] = await readAppEntry(buf.slice(off))
 
     entries.push(entry)
 
@@ -36,7 +36,7 @@ function readAppEntries (buf) {
 }
 
 // Read a single app entry, returning its id, name and key-value entries
-function readAppEntry (buf) {
+async function readAppEntry (buf) {
   let off = 0
 
   const id = buf.readUInt32LE(off)
