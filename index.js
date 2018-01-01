@@ -62,21 +62,18 @@ async function loadBinaryVDF (filePath, btype) {
   }
 }
 
-/*
-  async function saveTextVDF (filePath, data) {
-  if (filePath === null) {
-    throw new Error(`null "filePath" for saveTextVDF.`)
-  } else if (!fs.existsSync(filePath)) {
-    throw new Error(`Couldn't find ${filePath} to save as text VDF (ENOENT).`)
+SteamConfig.prototype.loadTextVDF = loadTextVDF
+
+SteamConfig.prototype.loadBinaryVDF = loadBinaryVDF
+
+// eslint-disable-line no-unused-vars
+SteamConfig.prototype.saveTextVDF = async function saveTextVDF (filePath, data) {
+  if (!filePath || filePath === null) {
+    throw new Error(`Bad "filePath" for saveTextVDF.`)
   } else {
     fs.writeFileAsync(filePath, VDF.stringify(data, true))
   }
 }
-*/
-
-SteamConfig.prototype.loadTextVDF = loadTextVDF
-
-SteamConfig.prototype.loadBinaryVDF = loadBinaryVDF
 
 SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
   if (typeof dir !== 'string') {
