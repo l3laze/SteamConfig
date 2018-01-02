@@ -69,7 +69,9 @@ SteamConfig.prototype.loadBinaryVDF = loadBinaryVDF
 // eslint-disable-line no-unused-vars
 SteamConfig.prototype.saveTextVDF = async function saveTextVDF (filePath, data) {
   if (!filePath || filePath === null) {
-    throw new Error(`Bad "filePath" for saveTextVDF.`)
+    throw new Error('Bad "filePath" for saveTextVDF.')
+  } else if (typeof data !== 'string') {
+    throw new Error(`Bad "data" for saveTextVDF.`)
   } else {
     fs.writeFileAsync(filePath, VDF.stringify(data, true))
   }
@@ -196,6 +198,31 @@ SteamConfig.prototype.setUser = function setUser () {
       this.user[ 'accountID' ] = ('' + new SteamID(userKeys[ index ]).accountid)
     }
   }
+}
+
+SteamConfig.prototype.detectPath = function detectPath () {
+  const platform = require('os').platform()
+  const arch = require('os').arch()
+  const home = require('os').homedir()
+  let detected = null
+
+  if (platform === 'win32') {
+    if (arch === 'x64') {
+      detected = path.join('C:\\', 'Program Files (x86)', 'Steam')
+    } else if (arch === 'x86') {
+      detected = path.join('C:\\', 'Program Files', 'Steam')
+    }
+  } else if (platform === 'linux') {
+    detected = path.join(home, '.steam')
+  } else if (platform === 'darwin') {
+    detected = path.join(home, 'Library', 'Application Support', 'Steam')
+  }
+
+  if (!fs.existsSync(detected)) {
+    detected = null
+  }
+
+  return detected
 }
 
 module.exports = SteamConfig

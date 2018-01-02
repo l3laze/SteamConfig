@@ -56,11 +56,18 @@ async function run () {
   let hidden = 0
   let fav = 0
   let args = {}
+  let installPath = null
 
   Object.assign(args, parseArgs())
 
   try {
-    steam.setInstallPath('/Users/tmshvr/Library/Application Support/Steam')
+    installPath = steam.detectPath()
+    if (installPath !== null) {
+      steam.setInstallPath(installPath)
+    } else {
+      console.error('Couldn\'t find default path to Steam.')
+      process.exit(1)
+    }
     await steam.loadRegistryLM()
     await steam.loadLoginusers()
     await steam.loadAppinfo()
