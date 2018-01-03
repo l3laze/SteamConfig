@@ -4,7 +4,7 @@ const BB = require('bluebird').Promise
 const fs = BB.promisifyAll(require('fs'))
 const path = require('path')
 const VDF = require('simple-vdf2')
-const BVDF = require('./mybinvdf.js')
+const BVDF = require('binary-vdf')
 const SVDF = BB.promisifyAll(require('steam-shortcut-editor'))
 const SteamID = require('steamid')
 
@@ -40,6 +40,7 @@ async function loadTextVDF (filePath) {
 
 async function loadBinaryVDF (filePath, btype) {
   let data
+  let stream
 
   if (filePath === null) {
     throw new TypeError(`Wrong type for "filePath"; expected a string, but got a ${typeof filePath}.`)
@@ -53,8 +54,8 @@ async function loadBinaryVDF (filePath, btype) {
     throw new Error(`The format ${btype} is not currently supported.`)
   } else {
     if (btype === 'appinfo') {
-      data = await fs.readFileAsync(filePath)
-      data = await BVDF.readAppInfo(data)
+      stream = await fs.createReadStream(filePath)
+      data = await BVDF.readAppInfo(stream)
       return data
     } else if (btype === 'shortcuts') {
       return SVDF.parseFileAsync(filePath, { autoConvertArrays: true, autoConvertBooleans: true, dateProperties: [ 'LastPlayTime' ] })

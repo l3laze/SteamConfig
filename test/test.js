@@ -7,17 +7,17 @@ const SteamConfig = require('../index.js')
 var steam
 
 describe('SteamConfig', function () {
+  beforeEach(function (done) {
+    steam = new SteamConfig()
+    done()
+  })
+
+  afterEach(function (done) {
+    steam = undefined
+    done()
+  })
+
   describe('#detectPath()', function () {
-    beforeEach(function (done) {
-      steam = new SteamConfig()
-      done()
-    })
-
-    afterEach(function (done) {
-      steam = undefined
-      done()
-    })
-
     it('should detect the default path on a compatible OS', function (done) {
       try {
         let detected = steam.detectPath()
@@ -32,16 +32,6 @@ describe('SteamConfig', function () {
   })
 
   describe('#setInstallPath()', function () {
-    beforeEach(function (done) {
-      steam = new SteamConfig()
-      done()
-    })
-
-    afterEach(function (done) {
-      steam = undefined
-      done()
-    })
-
     it('should accept a string value as the argument', function (done) {
       try {
         let detected = steam.detectPath()

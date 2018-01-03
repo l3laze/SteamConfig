@@ -1,6 +1,6 @@
 'use strict'
 
-const SteamConfig = require('./index.js')
+const SteamConfig = require('../index.js')
 
 let steam = new SteamConfig()
 

@@ -9,20 +9,16 @@
   "dependencies": {
     "binary-vdf": "^0.1.0",
     "bluebird": "^3.5.1",
-    "electron-log": "^2.2.11",
     "simple-vdf2": "^1.1.1",
     "steam-shortcut-editor": "^3.1.1",
     "steamid": "^1.1.0"
   },
   "devDependencies": {
-    "chai": "^4.1.2",
-    "chai-as-promised": "^7.1.1",
     "mocha": "^4.1.0",
     "snazzy": "^7.0.0",
     "standard": "^10.0.3"
   },
   "scripts": {
-    "dev": "NODE_ENV='development' yarn run start",
     "testm": "mocha test",
     "test": "yarn standard | snazzy && mocha test"
   }
