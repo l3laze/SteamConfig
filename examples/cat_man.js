@@ -10,19 +10,44 @@ function parseArgs () {
   if (process.argv.length === 2) {
     console.error('See "Usage" -- need args')
     process.exit(1)
-  } else if (process.argv.length !== 3) {
+  } else if (process.argv.length % 2 !== 0) {
     console.error(`See "Usage" -- wrong number of args ${process.argv.length}`)
+    process.exit(1)
   }
 
-  let runMode = process.argv[ 2 ].trim()
+  let args = process.argv.splice(2)
+  let i
+  let commands = {}
 
-  if (runMode === '--b' || runMode === '-backup') {
-    return { mode: 'backup' }
-  } else if (runMode === '--r' || runMode === '-restore') {
-    return { mode: 'restore' }
-  } else {
-    console.error(`See "Usage" -- Invalid mode ${runMode}.`)
+  for (i = 0; i < args.length; i += 2) {
+    let arg = args[ i ].trim()
+    if (arg === '-mode' || arg === '--m') {
+      arg = args[ i + 1 ].trim()
+
+      if (arg === 'backup' || arg === 'b') {
+        commands[ 'mode' ] = 'backup'
+      } else if (arg === 'restore' || arg === 'r') {
+        commands[ 'mode' ] = 'restore'
+      } else {
+        console.error(`See usage -- invalid mode: ${args[ i ]}`)
+        process.exit(1)
+      }
+    } else if (arg === '-path' || arg === '--p') {
+      arg = args[ i + 1 ].trim()
+
+      if (!fs.existsSync(arg)) {
+        console.error(`Bad path -- Can't find part/all of ${arg}`)
+        process.exit(1)
+      }
+
+      commands[ 'path' ] = arg
+    } else {
+      console.error(`See usage -- invalid command: ${arg}`)
+      process.exit(1)
+    }
   }
+
+  return commands
 }
 
 async function restoreCats () {
@@ -59,9 +84,15 @@ async function run () {
   let installPath = null
 
   Object.assign(args, parseArgs())
+  console.info(JSON.stringify(args, null, 2))
 
   try {
-    installPath = steam.detectPath()
+    if (!args.hasOwnProperty('path')) {
+      console.info('No path set; trying to find default...')
+      installPath = steam.detectPath()
+    } else {
+      installPath = args.path
+    }
     if (installPath !== null) {
       steam.setInstallPath(installPath)
     } else {
@@ -70,7 +101,6 @@ async function run () {
     }
     await steam.loadRegistryLM()
     await steam.loadLoginusers()
-    await steam.loadAppinfo()
 
     steam.setUser()
 
@@ -78,9 +108,14 @@ async function run () {
       console.error(`Error: No user associated with the Steam installation @ ${steam.loc}`)
       process.exit(1)
     }
+  } catch (err) {
+    console.error(err.message)
+    console.error(err.stack)
+    process.exit(1)
+  }
 
+  if (args.mode === 'backup') {
     await steam.loadSharedconfig()
-
     Object.assign(apps, steam.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps)
     Object.assign(appKeys, Object.keys(apps))
 
@@ -105,19 +140,13 @@ async function run () {
         cats[ `${app}` ] = apps[ app ]
       })
     })
-  } catch (err) {
-    console.error(err.message)
-    console.error(err.stack)
-    process.exit(1)
-  }
 
-  console.info(`App Entriess:\t${appKeys.length}`)
-  console.info(`Hidden:\t\t${hidden}`)
-  console.info(`Categorized:\t${catted}`)
-  console.info(`Favorites:\t${fav}`)
-  console.info(`Categories:\t${tags.length}\t${tags.join(', ')}`)
+    console.info(`App Entriess:\t${appKeys.length}`)
+    console.info(`Hidden:\t\t${hidden}`)
+    console.info(`Categorized:\t${catted}`)
+    console.info(`Favorites:\t${fav}`)
+    console.info(`Categories:\t${tags.length}\t${tags.join(', ')}`)
 
-  if (args.mode === 'backup') {
     await fs.writeFileSync(path.join(__dirname, 'catbackup.json'), JSON.stringify(cats, null, 2))
   } else if (args.mode === 'restore') {
     restoreCats()

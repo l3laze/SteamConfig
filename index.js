@@ -70,9 +70,9 @@ SteamConfig.prototype.loadBinaryVDF = loadBinaryVDF
 // eslint-disable-line no-unused-vars
 SteamConfig.prototype.saveTextVDF = async function saveTextVDF (filePath, data) {
   if (!filePath || filePath === null) {
-    throw new Error('Bad "filePath" for saveTextVDF.')
-  } else if (typeof data !== 'string') {
-    throw new Error(`Bad "data" for saveTextVDF.`)
+    throw new Error('Bad file path for saveTextVDF.')
+  } else if (typeof data !== 'object') {
+    throw new Error(`Bad data for saveTextVDF; should be an object.`)
   } else {
     fs.writeFileAsync(filePath, VDF.stringify(data, true))
   }

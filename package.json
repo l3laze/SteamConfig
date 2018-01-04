@@ -1,6 +1,6 @@
 {
   "name": "steamconfig",
-  "version": "0.0.2-beta",
+  "version": "0.0.1-alpha",
   "description": "API to access the Steam Client's config.",
   "main": "index.js",
   "author": "l3l_aze <l3l_aze@yahoo.com>",
