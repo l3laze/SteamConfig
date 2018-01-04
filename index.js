@@ -226,4 +226,32 @@ SteamConfig.prototype.detectPath = function detectPath () {
   return detected
 }
 
+SteamConfig.prototype.getPathTo = function (what) {
+  if (what === undefined || what === null) {
+    throw new Error(`Unknown path type: ${what}.`)
+  } else if (this.loc === null) {
+    throw new Error('steam.loc must be set before getPathTo can be used.')
+  }
+
+  if (what === 'appinfo' || what === 'packageinfo') {
+    return path.join(this.loc, 'appcache')
+  } else if (what === 'config' || what === 'loginusers') {
+    return path.join(this.loc, 'config')
+  } else if (what === 'steamapps') {
+    return path.join(this.loc, 'steamapps')
+  } else if (what === 'sharedconfig') {
+    if (this.user !== null && this.user.hasOwnProperty('accountID')) {
+      return path.join(this.loc, 'userdata', this.user.accountID, '7', 'remote', 'sharedconfig.vdf')
+    } else {
+      throw new Error('User must be set before getPathTo can get the path to sharedconfig.vdf.')
+    }
+  } else if (what === 'localconfig') {
+    if (this.user !== null && this.user.hasOwnProperty('accountID')) {
+      return path.join(this.loc, 'userdata', this.user.accountID, 'config', 'localconfig.vdf')
+    } else {
+      throw new Error('User must be set before getPathTo can get the path to localconfig.vdf.')
+    }
+  }
+}
+
 module.exports = SteamConfig
