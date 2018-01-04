@@ -3,25 +3,42 @@
 
 const path = require('path')
 const SteamConfig = require('../index.js')
-// const assert = require('assert')
 
 var steam
 
 describe('SteamConfig', function () {
+  beforeEach(function (done) {
+    steam = new SteamConfig()
+    done()
+  })
+
+  afterEach(function (done) {
+    steam = undefined
+    done()
+  })
+
+  describe('#detectPath()', function () {
+    it('should detect the default path on a compatible OS', function (done) {
+      try {
+        let detected = steam.detectPath()
+        if (detected === null) {
+          throw new Error('Path to Steam was not found.')
+        }
+      } catch (err) {
+        return done(err)
+      }
+      done()
+    })
+  })
+
   describe('#setInstallPath()', function () {
-    beforeEach(function (done) {
-      steam = new SteamConfig()
-      done()
-    })
-
-    afterEach(function (done) {
-      steam = undefined
-      done()
-    })
-
     it('should accept a string value as the argument', function (done) {
       try {
-        steam.setInstallPath('/Users/tmshvr/Library/Application Support/Steam')
+        let detected = steam.detectPath()
+        if (detected === null) {
+          throw new Error('Path to Steam was not found.')
+        }
+        steam.setInstallPath(detected)
       } catch (err) {
         return done(err)
       }
@@ -41,9 +58,17 @@ describe('SteamConfig', function () {
 
 describe('SteamConfig', function () {
   beforeEach(function (done) {
-    steam = new SteamConfig()
-    steam.setInstallPath('/Users/tmshvr/Library/Application Support/Steam')
-    done()
+    try {
+      steam = new SteamConfig()
+      let detected = steam.detectPath()
+      if (detected === null) {
+        throw new Error('Path to Steam was not found.')
+      }
+      steam.setInstallPath(detected)
+      done()
+    } catch (err) {
+      done(err)
+    }
   })
 
   afterEach(function (done) {
@@ -63,6 +88,24 @@ describe('SteamConfig', function () {
     it('should not accept a non-string value as the argument', async function () {
       try {
         await steam.loadTextVDF(8675309)
+      } catch (err) {
+        return err
+      }
+    })
+  })
+
+  describe('#saveTextVDF()', function () {
+    it('should accept a string value as the data argument', async function () {
+      try {
+        await steam.saveTextVDF(path.join(steam.loc, 'registry.vdf'), steam.loadTextVDF(path.join(steam.loc, 'registry.vdf')))
+      } catch (err) {
+        return err
+      }
+    })
+
+    it('should not accept a non-string value as the data argument', async function () {
+      try {
+        await steam.saveTextVDF(path.join(steam.loc, 'registry.vdf'), 8675309)
       } catch (err) {
         return err
       }

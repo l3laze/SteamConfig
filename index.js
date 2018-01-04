@@ -4,7 +4,7 @@ const BB = require('bluebird').Promise
 const fs = BB.promisifyAll(require('fs'))
 const path = require('path')
 const VDF = require('simple-vdf2')
-const BVDF = require('./mybinvdf.js')
+const BVDF = require('binary-vdf')
 const SVDF = BB.promisifyAll(require('steam-shortcut-editor'))
 const SteamID = require('steamid')
 
@@ -40,6 +40,7 @@ async function loadTextVDF (filePath) {
 
 async function loadBinaryVDF (filePath, btype) {
   let data
+  let stream
 
   if (filePath === null) {
     throw new TypeError(`Wrong type for "filePath"; expected a string, but got a ${typeof filePath}.`)
@@ -53,8 +54,8 @@ async function loadBinaryVDF (filePath, btype) {
     throw new Error(`The format ${btype} is not currently supported.`)
   } else {
     if (btype === 'appinfo') {
-      data = await fs.readFileAsync(filePath)
-      data = await BVDF.readAppInfo(data)
+      stream = await fs.createReadStream(filePath)
+      data = await BVDF.readAppInfo(stream)
       return data
     } else if (btype === 'shortcuts') {
       return SVDF.parseFileAsync(filePath, { autoConvertArrays: true, autoConvertBooleans: true, dateProperties: [ 'LastPlayTime' ] })
@@ -62,21 +63,20 @@ async function loadBinaryVDF (filePath, btype) {
   }
 }
 
-/*
-  async function saveTextVDF (filePath, data) {
-  if (filePath === null) {
-    throw new Error(`null "filePath" for saveTextVDF.`)
-  } else if (!fs.existsSync(filePath)) {
-    throw new Error(`Couldn't find ${filePath} to save as text VDF (ENOENT).`)
+SteamConfig.prototype.loadTextVDF = loadTextVDF
+
+SteamConfig.prototype.loadBinaryVDF = loadBinaryVDF
+
+// eslint-disable-line no-unused-vars
+SteamConfig.prototype.saveTextVDF = async function saveTextVDF (filePath, data) {
+  if (!filePath || filePath === null) {
+    throw new Error('Bad file path for saveTextVDF.')
+  } else if (typeof data !== 'object') {
+    throw new Error(`Bad data for saveTextVDF; should be an object.`)
   } else {
     fs.writeFileAsync(filePath, VDF.stringify(data, true))
   }
 }
-*/
-
-SteamConfig.prototype.loadTextVDF = loadTextVDF
-
-SteamConfig.prototype.loadBinaryVDF = loadBinaryVDF
 
 SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
   if (typeof dir !== 'string') {
@@ -199,6 +199,31 @@ SteamConfig.prototype.setUser = function setUser () {
       this.user[ 'accountID' ] = ('' + new SteamID(userKeys[ index ]).accountid)
     }
   }
+}
+
+SteamConfig.prototype.detectPath = function detectPath () {
+  const platform = require('os').platform()
+  const arch = require('os').arch()
+  const home = require('os').homedir()
+  let detected = null
+
+  if (platform === 'win32') {
+    if (arch === 'x64') {
+      detected = path.join('C:\\', 'Program Files (x86)', 'Steam')
+    } else if (arch === 'x86') {
+      detected = path.join('C:\\', 'Program Files', 'Steam')
+    }
+  } else if (platform === 'linux') {
+    detected = path.join(home, '.steam')
+  } else if (platform === 'darwin') {
+    detected = path.join(home, 'Library', 'Application Support', 'Steam')
+  }
+
+  if (!fs.existsSync(detected)) {
+    detected = null
+  }
+
+  return detected
 }
 
 module.exports = SteamConfig
