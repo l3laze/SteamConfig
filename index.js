@@ -74,7 +74,7 @@ SteamConfig.prototype.saveTextVDF = async function saveTextVDF (filePath, data) 
   } else if (typeof data !== 'object') {
     throw new Error(`Bad data for saveTextVDF; should be an object.`)
   } else {
-    fs.writeFileAsync(filePath, VDF.stringify(data, true))
+    await fs.writeFileAsync(filePath, VDF.stringify(data, true))
   }
 }
 
@@ -123,6 +123,13 @@ SteamConfig.prototype.loadLoginusers = async function loadLoginusers () {
   let filePath = path.join(this.loc, 'config', 'loginusers.vdf')
 
   this.loginusers = await loadTextVDF(filePath)
+
+  let userKeys = Object.keys(this.loginusers.users)
+
+  for (let i = 0; i < userKeys.length; i += 1) {
+    this.loginusers.users[userKeys[ i ]][ 'accountID' ] = ('' + new SteamID(userKeys[ i ]).accountid)
+    this.loginusers.users[userKeys[ i ]][ 'id64' ] = userKeys[ i ]
+  }
 }
 
 SteamConfig.prototype.loadLibraryfolders = async function loadLibraryfolders () {
@@ -196,7 +203,6 @@ SteamConfig.prototype.setUser = function setUser () {
     if (this.loginusers.users[userKeys[ index ]].AccountName === this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser) {
       this.user = {}
       Object.assign(this.user, this.loginusers.users[userKeys[ index ]])
-      this.user[ 'accountID' ] = ('' + new SteamID(userKeys[ index ]).accountid)
     }
   }
 }
@@ -233,10 +239,14 @@ SteamConfig.prototype.getPathTo = function (what) {
     throw new Error('steam.loc must be set before getPathTo can be used.')
   }
 
-  if (what === 'appinfo' || what === 'packageinfo') {
-    return path.join(this.loc, 'appcache')
-  } else if (what === 'config' || what === 'loginusers') {
-    return path.join(this.loc, 'config')
+  if (what === 'registry') {
+    return path.join(this.loc, 'registry.vdf')
+  } else if (what === 'appinfo') {
+    return path.join(this.loc, 'appcache', 'appinfo.vdf')
+  } else if (what === 'config') {
+    return path.join(this.loc, 'config', 'config.vdf')
+  } else if (what === 'loginusers') {
+    return path.join(this.loc, 'config', 'loginusers.vdf')
   } else if (what === 'steamapps') {
     return path.join(this.loc, 'steamapps')
   } else if (what === 'sharedconfig') {
@@ -252,6 +262,29 @@ SteamConfig.prototype.getPathTo = function (what) {
       throw new Error('User must be set before getPathTo can get the path to localconfig.vdf.')
     }
   }
+}
+
+SteamConfig.prototype.detectUser = async function detectUser () {
+  let detected = null
+
+  if (this.registry === null) {
+    throw new Error('You must load the registry before the user can be detected')
+  }
+
+  await this.loadRegistryLM()
+  await this.loadLoginusers()
+
+  let userKeys = Object.keys(this.loginusers.users)
+
+  if (userKeys.length === 0) {
+    throw new Error('There are no users associated with this Steam installation.')
+  } else if (userKeys.length === 1) {
+    detected = this.loginusers.users[userKeys[ 0 ]].AccountName
+  } else {
+    throw new Error(`There are ${userKeys.length} users associated with this Steam installation; cannot auto-detect.`)
+  }
+
+  return detected
 }
 
 module.exports = SteamConfig
