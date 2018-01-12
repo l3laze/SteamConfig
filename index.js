@@ -298,20 +298,22 @@ SteamConfig.prototype.loadShortcuts = async function loadShortcuts () {
 
   let filePath = path.join(this.loc, 'userdata', this.user.accountID, 'config', 'shortcuts.vdf')
 
-  try {
-    this.shortcuts = await loadBinaryVDF(filePath, 'shortcuts')
-  } catch (err) {
-    let reason = ''
+  if (fs.existsSync(filePath)) { // Ignore if it doesn't exist because if there's not been any non-Steam games added, it won't.
+    try {
+      this.shortcuts = await loadBinaryVDF(filePath, 'shortcuts')
+    } catch (err) {
+      let reason = ''
 
-    if (err.message.indexOf('ENOENT')) {
-      reason = ' it does not exist'
-    } else if (err.message.indexOf('EACCES')) {
-      reason = ' it cannot be accessed'
-    } else {
-      reason = `: ${err.message.toLowerCase()} ("${err.code || err.name || 'error'}" @ line ${getLine(err)})`
+      if (err.message.indexOf('ENOENT')) {
+        reason = ' it does not exist'
+      } else if (err.message.indexOf('EACCES')) {
+        reason = ' it cannot be accessed'
+      } else {
+        reason = `: ${err.message.toLowerCase()} ("${err.code || err.name || 'error'}" @ line ${getLine(err)})`
+      }
+
+      throw new Error(`Failed to load shortcuts as a text VDF file because${reason}.`)
     }
-
-    throw new Error(`Failed to load shortcuts as a text VDF file because${reason}.`)
   }
 }
 
