@@ -3,8 +3,16 @@
 
 const path = require('path')
 const SteamConfig = require('../index.js')
+const Dummy = require('steam-dummy')
 
-var steam
+let dumbass = new Dummy()
+
+let steam
+let pathTo = path.join(__dirname, 'Dummy')
+
+dumbass.makeDummy(pathTo)
+
+console.info('Dummy data created.')
 
 describe('SteamConfig', function () {
   beforeEach(function (done) {
@@ -60,11 +68,7 @@ describe('SteamConfig', function () {
   beforeEach(function (done) {
     try {
       steam = new SteamConfig()
-      let detected = steam.detectPath()
-      if (detected === null) {
-        throw new Error('Path to Steam was not found.')
-      }
-      steam.setInstallPath(detected)
+      steam.setInstallPath(pathTo)
       done()
     } catch (err) {
       done(err)
@@ -95,7 +99,7 @@ describe('SteamConfig', function () {
   })
 
   describe('#saveTextVDF()', function () {
-    it('should accept a string value as the data argument', async function () {
+    it('should accept an object as the data argument', async function () {
       try {
         await steam.saveTextVDF(path.join(steam.loc, 'registry.vdf'), steam.loadTextVDF(path.join(steam.loc, 'registry.vdf')))
       } catch (err) {
@@ -103,9 +107,26 @@ describe('SteamConfig', function () {
       }
     })
 
-    it('should not accept a non-string value as the data argument', async function () {
+    it('should not accept a non-object as the data argument', async function () {
       try {
         await steam.saveTextVDF(path.join(steam.loc, 'registry.vdf'), 8675309)
+      } catch (err) {
+        return err
+      }
+    })
+
+    it('should accept a string value as the path argument', async function () {
+      try {
+        await steam.loadRegistryLM()
+        await steam.saveTextVDF(path.join(steam.loc, 'registry.vdf'), steam.registry)
+      } catch (err) {
+        return err
+      }
+    })
+
+    it('should not accept a non-string value as the path argument', async function () {
+      try {
+        await steam.saveTextVDF(8675309, 'Hi')
       } catch (err) {
         return err
       }

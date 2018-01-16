@@ -1410,6 +1410,10 @@ standard@^10.0.3:
     eslint-plugin-standard "~3.0.1"
     standard-engine "~7.0.0"
 
+steam-dummy@^0.0.1:
+  version "0.0.1"
+  resolved "https://registry.yarnpkg.com/steam-dummy/-/steam-dummy-0.0.1.tgz#121c2b5a0d76e22f502176757544a68cb7ae6bf4"
+
 steam-shortcut-editor@^3.1.1:
   version "3.1.1"
   resolved "https://registry.yarnpkg.com/steam-shortcut-editor/-/steam-shortcut-editor-3.1.1.tgz#9d9684bdbeed57d95fd07538236dcd3d19e5ab5d"

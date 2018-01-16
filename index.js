@@ -150,6 +150,8 @@ async function saveTextVDF (filePath, data) { // eslint-disable-line no-unused-v
   }
 }
 
+SteamConfig.prototype.saveTextVDF = saveTextVDF
+
 SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
   if (typeof dir !== 'string') {
     throw new TypeError(`Failed to setInstallPath because it is invalid -- type is "${typeof dir}", but should be "string".`)
@@ -214,20 +216,22 @@ SteamConfig.prototype.loadLibraryfolders = async function loadLibraryfolders () 
   let filePath = path.join(this.loc, 'steamapps', 'libraryfolders.vdf')
   let i
 
-  this.libraryfolders = await loadTextVDF(filePath)
-  this.nondefaultLibraryfolders = []
+  if (fs.existsSync(filePath)) {
+    this.libraryfolders = await loadTextVDF(filePath)
+    this.nondefaultLibraryfolders = []
 
-  let libs = Object.keys(this.libraryfolders.LibraryFolders)
+    let libs = Object.keys(this.libraryfolders.LibraryFolders)
 
-  for (i = 0; i < libs.length; i++) {
-    if (libs[ i ] !== 'TimeNextStatsReport' && libs[ i ] !== 'ContentStatsID') {
-      this.nondefaultLibraryfolders.push(this.libraryfolders.LibraryFolders[libs[ i ]])
+    for (i = 0; i < libs.length; i++) {
+      if (libs[ i ] !== 'TimeNextStatsReport' && libs[ i ] !== 'ContentStatsID') {
+        this.nondefaultLibraryfolders.push(this.libraryfolders.LibraryFolders[libs[ i ]])
+      }
     }
   }
 }
 
 SteamConfig.prototype.loadSteamapps = async function loadSteamapps () {
-  let apps
+  let apps = []
   let x, y
   let files
   let libs = []
@@ -236,8 +240,6 @@ SteamConfig.prototype.loadSteamapps = async function loadSteamapps () {
     Object.assign(libs, this.nondefaultLibraryfolders)
 
     libs.push(this.loc)
-
-    apps = []
 
     for (x = 0; x < libs.length; x += 1) {
       try {

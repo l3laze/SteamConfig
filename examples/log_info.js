@@ -37,9 +37,36 @@ async function run () {
   logData()
 }
 
-run()
+async function getCatInfo () {
+  let cats = []
+  let catted = 0
+  let apps
+  let keys
+  apps = Object.assign({}, steam.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps)
+  keys = Object.keys(apps)
+  apps = keys.map(function (k) {
+    return apps[ k ]
+  })
 
-function logData () {
+  catted = apps.reduce(function (accumulator, current, index, array) {
+    return accumulator + (current.hasOwnProperty('tags') ? 1 : 0)
+  }, 0)
+
+  apps.forEach(function (current, index, array) {
+    if (current.hasOwnProperty('tags')) {
+      for (let cat in current.tags) {
+        if (cats.includes(current.tags[ cat ]) === false) {
+          cats.push(current.tags[ cat ])
+        }
+      }
+    }
+  })
+
+  return [cats, catted]
+}
+
+async function logData () {
+  let catData = await getCatInfo()
   console.info(`Install location:\t${steam.loc}`)
   console.info(`Active user:\t${steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser}`)
   console.info(`Users:\t\t\t${Object.keys(steam.loginusers.users).length}`)
@@ -49,10 +76,8 @@ function logData () {
   console.info(`Steam apps:\t\t${steam.steamapps.length}`)
   console.info(`Non-Steam:\t\t${Object.keys(steam.shortcuts.shortcuts).length}`)
   console.info(`Appinfo Entries:\t${steam.appinfo.length}`)
+  console.info(`Categorized Apps:\t${catData[ 1 ]}`)
+  console.info(`Categories:\t\t${catData[ 0 ].length} (${catData[ 0 ].join(', ')})`)
 }
 
-process.on('uncaughtException', (err) => {
-  console.error(err)
-  console.error(err.captureStackTrace())
-  process.exit(1)
-})
+run()
