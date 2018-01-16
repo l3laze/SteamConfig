@@ -6,3 +6,5 @@ node_modules/
 measure\.js
 
 examples/data/
+
+test/Dummy/

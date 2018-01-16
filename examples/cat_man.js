@@ -3,51 +3,21 @@
 const fs = require('fs')
 const path = require('path')
 const SteamConfig = require('../index.js')
+const cli = require('cli')
 
 let steam = new SteamConfig()
+let options = cli.parse({
+  path: ['p', 'Path to Steam installation.', 'path', null],
+  user: ['u', 'User to backup/restore categories for.', 'string', null],
+  mode: ['m', 'Mode: (b)ackup or (r)estore.', 'string', null]
+})
 
-function parseArgs () {
-  if (process.argv.length === 2) {
-    console.error('See "Usage" -- need args')
-    process.exit(1)
-  } else if (process.argv.length % 2 !== 0) {
-    console.error(`See "Usage" -- wrong number of args ${process.argv.length}`)
-    process.exit(1)
-  }
-
-  let args = process.argv.splice(2)
-  let i
-  let commands = {}
-
-  for (i = 0; i < args.length; i += 2) {
-    let arg = args[ i ].trim()
-    if (arg === '-mode' || arg === '--m') {
-      arg = args[ i + 1 ].trim()
-
-      if (arg === 'backup' || arg === 'b') {
-        commands[ 'mode' ] = 'backup'
-      } else if (arg === 'restore' || arg === 'r') {
-        commands[ 'mode' ] = 'restore'
-      } else {
-        console.error(`See usage -- invalid mode: ${args[ i ]}`)
-        process.exit(1)
-      }
-    } else if (arg === '-path' || arg === '--p') {
-      arg = args[ i + 1 ].trim()
-
-      if (!fs.existsSync(arg)) {
-        console.error(`Bad path -- Can't find part/all of ${arg}`)
-        process.exit(1)
-      }
-
-      commands[ 'path' ] = arg
-    } else {
-      console.error(`See usage -- invalid command: ${arg}`)
-      process.exit(1)
-    }
-  }
-
-  return commands
+if (options.path && !fs.existsSync(options.path)) {
+  console.error(`Bad path -- Can't find part/all of ${options.path}`)
+  process.exit(1)
+} else if (options.mode === null) {
+  console.error(`No mode set -- can't run without a mode.`)
+  process.exit(1)
 }
 
 async function backupCats () {
@@ -127,20 +97,18 @@ async function restoreCats () {
 }
 
 async function run () {
-  let args = {}
   let installPath = null
 
-  Object.assign(args, parseArgs())
-  console.info(JSON.stringify(args, null, 2))
-
   try {
-    if (!args.hasOwnProperty('path')) {
+    if (!options.path) {
       console.info('No path set; trying to find default...')
       installPath = steam.detectPath()
     } else {
-      installPath = args.path
+      installPath = options.path
     }
-    if (installPath !== null) {
+
+    if (typeof installPath === 'string') {
+      console.info(`Path: ${installPath}`)
       steam.setInstallPath(installPath)
     } else {
       console.error('Couldn\'t find default path to Steam.')
@@ -161,15 +129,17 @@ async function run () {
     process.exit(1)
   }
 
-  if (args.mode === 'backup') {
+  if (options.mode === 'backup') {
     await backupCats()
-  } else if (args.mode === 'restore') {
+  } else if (options.mode === 'restore') {
     await restoreCats()
   }
 
-  let splitArgs = args.mode.split('')
+  if (options.mode) {
+    let splitArgs = options.mode.split('')
 
-  console.info(`...${splitArgs[ 0 ].toUpperCase() + splitArgs.splice(1, splitArgs.length).join('').toLowerCase()} complete.`)
+    console.info(`...${splitArgs[ 0 ].toUpperCase() + splitArgs.splice(1, splitArgs.length).join('').toLowerCase()} complete.`)
+  }
 }
 
 run()
