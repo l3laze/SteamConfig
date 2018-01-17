@@ -7,10 +7,13 @@ const VDF = require('simple-vdf2')
 const BVDF = require('binary-vdf')
 const SVDF = BB.promisifyAll(require('steam-shortcut-editor'))
 const SteamID = require('steamid')
+const Registry = require('rage-edit')
 
 const platform = require('os').platform()
 const arch = require('os').arch()
 const home = require('os').homedir()
+
+const winreg = new Registry('HKCU\\Software\\Valve\\Steam')
 
 function SteamConfig () {
   this.loc = null
@@ -126,7 +129,31 @@ async function loadBinaryVDF (filePath, btype) {
   }
 }
 
-async function saveTextVDF (filePath, data) { // eslint-disable-line no-unused-vars
+async function loadWinReg () {
+  return {
+    'Registry': {
+      'HKCU': {
+        'Software': {
+          'Valve': {
+            'Steam': {
+              'language': await winreg.get('language'),
+              'RunningAppID': await winreg.get('RunningAppID'),
+              'Apps': await winreg.get('Apps'),
+              'AutoLoginUser': await winreg.get('AutoLoginUser'),
+              'RememberPassword': await winreg.get('RememberPassword'),
+              'SourceModInstallPath': await winreg.get('SourceModInstallPath'),
+              'AlreadyRetriedOfflineMode': await winreg.get('AlreadyRetriedOfflineMode'),
+              'StartupMode': await winreg.get('StartupMode'),
+              'SkinV4': await winreg.get('SkinV4')
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+SteamConfig.prototype.saveTextVDF = async function saveTextVDF (filePath, data) { // eslint-disable-line no-unused-vars
   if (typeof filePath !== 'string') {
     throw new TypeError(`Failed to save filePath because it is invalid -- type is "${typeof filePath}", but should be "string".`)
   } else if (typeof data !== 'object') {
@@ -150,8 +177,6 @@ async function saveTextVDF (filePath, data) { // eslint-disable-line no-unused-v
   }
 }
 
-SteamConfig.prototype.saveTextVDF = saveTextVDF
-
 SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
   if (typeof dir !== 'string') {
     throw new TypeError(`Failed to setInstallPath because it is invalid -- type is "${typeof dir}", but should be "string".`)
@@ -162,11 +187,18 @@ SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
   }
 }
 
-SteamConfig.prototype.loadRegistryLM = async function loadRegistryLM () {
-  let filePath = path.join(this.loc, 'registry.vdf')
+SteamConfig.prototype.loadRegistry = async function loadRegistry () {
   let data
 
-  data = await loadTextVDF(filePath)
+  if (platform === 'darwin' || platform === 'linux') {
+    let filePath = path.join(this.loc, 'registry.vdf')
+
+    data = await loadTextVDF(filePath)
+  } else if (platform === 'win32') {
+    data = await loadWinReg()
+    throw new Error('This platform is not currently supported.')
+  }
+
   this.registry = data
 }
 
@@ -319,11 +351,11 @@ SteamConfig.prototype.loadShortcuts = async function loadShortcuts () {
   }
 }
 
-SteamConfig.prototype.setUser = function setUser () {
-  if (this.loginusers === null || this.loginusers.hasOwnProperty('users') === false) {
+SteamConfig.prototype.setUser = function setUser (toUser) {
+  if (toUser === undefined || typeof toUser !== 'string') {
+    throw new Error(`Invalid type for toUser: ${typeof touser}; should be 'string'.`)
+  } else if (this.loginusers === null || this.loginusers.hasOwnProperty('users') === false) {
     throw new Error('Cannot set user before loginusers is loaded.')
-  } else if (this.registry === null) {
-    throw new Error('Cannot set user before registry is loded.')
   }
 
   if (this.registry.Registry.HKCU.Software.Valve.Steam.hasOwnProperty('AutoLoginUser') === false) {
@@ -331,12 +363,10 @@ SteamConfig.prototype.setUser = function setUser () {
   }
 
   let userKeys = Object.keys(this.loginusers.users)
-  let index
 
-  for (index = 0; index < userKeys.length; index += 1) {
-    if (this.loginusers.users[userKeys[ index ]].AccountName === this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser) {
-      this.user = {}
-      Object.assign(this.user, this.loginusers.users[userKeys[ index ]])
+  for (let index = 0; index < userKeys.length; index += 1) {
+    if (this.loginusers.users[userKeys[ index ]].AccountName === toUser) {
+      this.user = Object.assign({}, this.loginusers.users[userKeys[ index ]])
     }
   }
 }
@@ -357,6 +387,10 @@ SteamConfig.prototype.detectPath = function detectPath () {
   }
 
   try {
+    if (detected === null) {
+      throw new Error('the current platform is not supported.')
+    }
+
     if (!fs.existsSync(detected)) {
       detected = null
     }
@@ -381,7 +415,7 @@ SteamConfig.prototype.detectPath = function detectPath () {
 
 SteamConfig.prototype.getPathTo = function (what) {
   if (typeof what !== 'string') {
-    throw new Error(`Unknown path type: ${what}.`)
+    throw new Error(`Invalid path type: ${typeof what}; should be a string.`)
   } else if (this.loc === null) {
     throw new Error('The path to Steam must be set before getPathTo can be used.')
   }
@@ -408,6 +442,8 @@ SteamConfig.prototype.getPathTo = function (what) {
     } else {
       throw new Error('User must be set before getPathTo can be used for localconfig.vdf.')
     }
+  } else {
+    throw new Error(`Unknown file for getPathTo: ${what}`)
   }
 }
 
@@ -428,8 +464,8 @@ SteamConfig.prototype.detectUser = async function detectUser () {
     throw new Error('There are no users associated with this Steam installation.')
   } else if (userKeys.length === 1) {
     detected = this.loginusers.users[userKeys[ 0 ]].AccountName
-  } else {
-    throw new Error(`There are ${userKeys.length} users associated with this Steam installation; cannot auto-detect the user.`)
+  } else if (this.registry.Registry.Software.Valve.Steam.AutoLoginUser) {
+    detected = this.registry.Registry.Software.Valve.Steam.AutoLoginUser
   }
 
   return detected

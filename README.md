@@ -1,12 +1,46 @@
 # SteamConfig
 
-<p align="center">
-  <a href="https://david-dm.org/l3laze/SteamConfig"><img src="https://david-dm.org/l3laze/SteamConfig.svg" alt="Dependency Status"></a>
-  <a href="https://david-dm.org/l3laze/SteamConfig#info=devDependencies"><img src="https://david-dm.org/l3laze/SteamConfig/dev-status.svg" alt="devDependency Status"></a>
-</p>
-<p align="center">
-  <a href="https://standardjs.com"><img src="https://img.shields.io/badge/code_style-standard-brightgreen.svg" alt="Code Style"></a>
-  <a href="https://github.com/l3laze/SteamConfig"><img src="https://img.shields.io/github/languages/code-size/badges/shields.svg" alt="Code Style"></a>
-</p>
+A library to accompany the [Steam-Data](https://github.com/l3laze/Steam-Data) project.
 
-Library to accompany the [Steam-Data](https://github.com/l3laze/Steam-Data) project.
+
+[![Dependencies](https://img.shields.io/david/expressjs/express.svg)](https://github.com/l3laze/SteamConfig)
+
+[![Dev Dependencies](https://img.shields.io/david/dev/expressjs/express.svg)](https://github.com/l3laze/SteamConfig)
+
+[![Peer Dependencies](https://img.shields.io/david/peer/webcomponents/generator-element.svg)](https://github.com/l3laze/SteamConfig)
+
+[![Code size in bytes](https://img.shields.io/github/languages/code-size/badges/shields.svg)](https://github.com/l3laze/SteamConfig)
+
+[![JavaScript Style Guide](https://cdn.rawgit.com/standard/standard/master/badge.svg)](https://github.com/standard/standard)
+
+
+----
+
+
+# Installation
+
+
+`npm i steamconfig`
+
+
+Or
+
+
+`yarn add steamconfig`
+
+
+----
+
+
+# Usage
+
+
+```javascript
+const SteamConfig = require('steamconfig')
+let steam = new SteamConfig()
+```
+
+
+For more, see the `API` documentation.
+
+----
