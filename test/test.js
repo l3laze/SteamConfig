@@ -117,7 +117,7 @@ describe('SteamConfig', function () {
 
     it('should accept a string value as the path argument', async function () {
       try {
-        await steam.loadRegistryLM()
+        await steam.loadRegistry()
         await steam.saveTextVDF(path.join(steam.loc, 'registry.vdf'), steam.registry)
       } catch (err) {
         return err
@@ -151,10 +151,10 @@ describe('SteamConfig', function () {
     })
   })
 
-  describe('#loadRegistryLM()', function () {
+  describe('#loadRegistry()', function () {
     it('should populate steam.registry with an Object', async function () {
       try {
-        await steam.loadRegistryLM()
+        await steam.loadRegistry()
       } catch (err) {
         return err
       }
@@ -197,7 +197,7 @@ describe('SteamConfig', function () {
   describe('#setUser()', function () {
     it('should set steam.user to the current user of the client', async function () {
       try {
-        await steam.loadRegistryLM()
+        await steam.loadRegistry()
         await steam.loadLoginusers()
         steam.setUser()
       } catch (err) {

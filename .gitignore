@@ -8,3 +8,5 @@ measure\.js
 examples/data/
 
 test/Dummy/
+
+examples/catbackup\.json

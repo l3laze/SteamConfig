@@ -41,6 +41,10 @@ let steam = new SteamConfig()
 ```
 
 
-For more, see the `API` documentation.
+For the "full" documentation, see `API`.
+
 
 ----
+
+
+...

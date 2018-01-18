@@ -7,7 +7,7 @@ const VDF = require('simple-vdf2')
 const BVDF = require('binary-vdf')
 const SVDF = BB.promisifyAll(require('steam-shortcut-editor'))
 const SteamID = require('steamid')
-const Registry = require('rage-edit')
+const {Registry} = require('rage-edit')
 
 const platform = require('os').platform()
 const arch = require('os').arch()
@@ -460,12 +460,14 @@ SteamConfig.prototype.detectUser = async function detectUser () {
 
   let userKeys = Object.keys(this.loginusers.users)
 
-  if (userKeys.length === 0) {
-    throw new Error('There are no users associated with this Steam installation.')
+  if (this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser) {
+    detected = this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser
   } else if (userKeys.length === 1) {
     detected = this.loginusers.users[userKeys[ 0 ]].AccountName
-  } else if (this.registry.Registry.Software.Valve.Steam.AutoLoginUser) {
-    detected = this.registry.Registry.Software.Valve.Steam.AutoLoginUser
+  } else if (userKeys.length > 1) {
+    throw new Error(`There are ${userKeys.length} users associated with this Steam installation and no current user; cannot auto-detect the user.`)
+  } else {
+    throw new Error('There are no users associated with this Steam installation.')
   }
 
   return detected

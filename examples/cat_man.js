@@ -61,11 +61,11 @@ async function backupCats () {
   console.info(`Favorites:\t${fav}`)
   console.info(`Categories:\t${tags.length}\t${tags.join(', ')}`)
 
-  await fs.writeFileSync(path.join(__dirname, 'catbackup.json'), JSON.stringify(cats, null, 2))
+  await fs.writeFileSync(path.join(__dirname, 'data', 'catbackup.json'), JSON.stringify(cats, null, 2))
 }
 
 async function restoreCats () {
-  let backCats = JSON.parse('' + fs.readFileSync(path.join(__dirname, 'catbackup.json')))
+  let backCats = JSON.parse('' + fs.readFileSync(path.join(__dirname, 'data', 'catbackup.json')))
   await steam.loadSharedconfig()
   let scApps = Object.keys(steam.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps)
   let original = {}
@@ -93,7 +93,7 @@ async function restoreCats () {
     console.debug('Restored version is okay')
   }
 
-  steam.saveTextVDF(path.join(steam.loc, 'userdata', steam.user.accountID, '7', 'remote', 'sharedconfig.vdf'), steam.sharedconfig)
+  await steam.saveTextVDF(path.join(steam.loc, 'userdata', steam.user.accountID, '7', 'remote', 'sharedconfig.vdf'), steam.sharedconfig)
 }
 
 async function run () {
@@ -107,6 +107,14 @@ async function run () {
       installPath = options.path
     }
 
+    if (options.mode === 'b') {
+      options.mode = 'backup'
+    } else if (options.mode === 'r') {
+      options.mode = 'restore'
+    } else if (options.mode !== 'backup' && options.mode !== 'restore') {
+      throw new Error(`Invalid mode: ${options.mode}; should be 'b', 'backup', 'r', or 'restore'.`)
+    }
+
     if (typeof installPath === 'string') {
       console.info(`Path: ${installPath}`)
       steam.setInstallPath(installPath)
@@ -114,10 +122,14 @@ async function run () {
       console.error('Couldn\'t find default path to Steam.')
       process.exit(1)
     }
-    await steam.loadRegistryLM()
+    await steam.loadRegistry()
     await steam.loadLoginusers()
 
-    steam.setUser()
+    if (options.user) {
+      steam.setUser(options.user)
+    } else {
+      steam.setUser(await steam.detectUser())
+    }
 
     if (steam.user === null) {
       console.error(`Error: No user associated with the Steam installation @ ${steam.loc}`)

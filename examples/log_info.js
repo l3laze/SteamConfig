@@ -7,7 +7,7 @@ let steam = new SteamConfig()
 async function run () {
   try {
     steam.setInstallPath(steam.detectPath())
-    await steam.loadRegistryLM()
+    await steam.loadRegistry()
     await steam.loadLoginusers()
     steam.setUser()
     await steam.loadLibraryfolders()

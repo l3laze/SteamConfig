@@ -23,7 +23,7 @@ async function run () {
     }
   }
 
-  await steam.loadRegistryLM()
+  await steam.loadRegistry()
   await steam.loadLoginusers()
 
   let userKeys = Object.keys(steam.loginusers.users)
