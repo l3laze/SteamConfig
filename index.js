@@ -196,10 +196,21 @@ SteamConfig.prototype.loadRegistry = async function loadRegistry () {
     data = await loadTextVDF(filePath)
   } else if (platform === 'win32') {
     data = await loadWinReg()
-    throw new Error('This platform is not currently supported.')
+    // throw new Error('This platform is not currently supported.')
   }
 
   this.registry = data
+}
+
+SteamConfig.prototype.saveRegistry = async function saveRegistry () {
+  if (platform === 'darwin' || platform === 'linux') {
+    await fs.writeFileAsync(this.getPathTo('registry'), this.registry)
+  } else if (platform === 'win32') {
+    winreg.set('language', this.registry.Registry.HKCU.Software.Valve.Steam.language)
+    winreg.set('AutoLoginUser', this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser)
+    winreg.set('RememberPassword', this.registry.Registry.HKCU.Software.Valve.Steam.RememberPassword)
+    winreg.set('SkinV4', this.registry.Registry.HKCU.Software.Valve.Steam.SkinV4)
+  }
 }
 
 SteamConfig.prototype.loadAppinfo = async function loadAppinfo () {
@@ -374,10 +385,10 @@ SteamConfig.prototype.setUser = function setUser (toUser) {
 SteamConfig.prototype.detectPath = function detectPath () {
   let detected = null
 
-  if (platform === 'win32') {  // TODO: Windows
-    if (arch === 'x64') {
+  if (platform.indexOf('win32') !== -1) {  // TODO: Windows
+    if (arch === 'ia32') {
       detected = path.join('C:\\', 'Program Files (x86)', 'Steam')
-    } else if (arch === 'x86') {
+    } else {
       detected = path.join('C:\\', 'Program Files', 'Steam')
     }
   } else if (platform === 'linux') {
@@ -387,12 +398,13 @@ SteamConfig.prototype.detectPath = function detectPath () {
   }
 
   try {
-    if (detected === null) {
-      throw new Error('the current platform is not supported.')
+    if (detected !== null && !fs.existsSync(detected)) {
+      detected = null
+      throw new Error('the default path does not exist.')
     }
 
-    if (!fs.existsSync(detected)) {
-      detected = null
+    if (detected === null) {
+      throw new Error('the current platform is not supported.')
     }
   } catch (err) {
     let reason = ''

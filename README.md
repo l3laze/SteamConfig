@@ -45,6 +45,3 @@ For the "full" documentation, see `API`.
 
 
 ----
-
-
-...

@@ -111,30 +111,31 @@ async function run () {
   console.info(`${tagList.length} tags`)
 
   let hasOption = false
+  let mode = (options.remove === false ? 'Adding' : 'Removing')
 
   if (options.publisher) {
     hasOption = true
-    console.info('Adding publisher as category...')
+    console.info(`${mode} publisher as category...`)
   }
 
   if (options.developer) {
     hasOption = true
-    console.info('Adding developer as category...')
+    console.info(`${mode} developer as category...`)
   }
 
   if (options.metacritic) {
     hasOption = true
-    console.info('Adding metacritic score as category...')
+    console.info(`${mode} metacritic score as category...`)
   }
 
   if (options.noMeta) {
     hasOption = true
-    console.info('Adding No Metacritic as category...')
+    console.info(`${mode} "No Metacritic" as category...`)
   }
 
   if (options.tags) {
     hasOption = true
-    console.info(`Adding ${options.numTags} most popular tags as categories...`)
+    console.info(`${mode} ${options.numTags} most popular tags as categories...`)
   }
 
   if (hasOption === false) {
