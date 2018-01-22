@@ -7,9 +7,9 @@ let steam = new SteamConfig()
 async function run () {
   try {
     steam.setInstallPath(steam.detectPath())
-    await steam.loadRegistryLM()
+    await steam.loadRegistry()
     await steam.loadLoginusers()
-    steam.setUser()
+    steam.setUser(await steam.detectUser())
     await steam.loadLibraryfolders()
     await steam.loadSteamapps()
     await steam.loadConfig()
@@ -25,6 +25,8 @@ async function run () {
     await steam.loadSharedconfig()
     await steam.loadLocalconfig()
     await steam.loadShortcuts()
+
+    console.info(JSON.stringify(steam.shortcuts))
   } catch (err) {
     if ((err.message.indexOf('Failed to load ') !== -1 || err.message.indexOf('Failed to save ')) && err.message.indexOf(' because ') !== -1) {
       console.error(err.message)
@@ -66,18 +68,27 @@ async function getCatInfo () {
 }
 
 async function logData () {
-  let catData = await getCatInfo()
-  console.info(`Install location:\t${steam.loc}`)
-  console.info(`Active user:\t${steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser}`)
-  console.info(`Users:\t\t\t${Object.keys(steam.loginusers.users).length}`)
-  console.info(`Current User:\t\t${steam.user.PersonaName} (${steam.user.AccountName})`)
-  console.info(`Library Folders:\t${steam.nondefaultLibraryfolders.length + 1}`)
-  console.info(`Apps:\t\t\t${steam.steamapps.length + Object.keys(steam.shortcuts.shortcuts).length}`)
-  console.info(`Steam apps:\t\t${steam.steamapps.length}`)
-  console.info(`Non-Steam:\t\t${Object.keys(steam.shortcuts.shortcuts).length}`)
-  console.info(`Appinfo Entries:\t${steam.appinfo.length}`)
-  console.info(`Categorized Apps:\t${catData[ 1 ]}`)
-  console.info(`Categories:\t\t${catData[ 0 ].length} (${catData[ 0 ].join(', ')})`)
+  try {
+    let catData = await getCatInfo()
+    console.info(`Install location:\t${steam.loc}`)
+    console.info(`Users:\t\t\t${Object.keys(steam.loginusers.users).length}`)
+    console.info(`Active Steam user:\t${steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser}`)
+    console.info(`SteamConfig User:\t${steam.user.PersonaName} (${steam.user.AccountName})`)
+    console.info(`Library Folders:\t${steam.nondefaultLibraryfolders.length + 1}`)
+    console.info(`Apps:\t\t\t${steam.steamapps.length + (steam.shortcuts !== null ? Object.keys(steam.shortcuts.shortcuts).length : 0)}`)
+    console.info(`Steam apps:\t\t${steam.steamapps.length}`)
+    if (steam.shortcuts !== null) {
+      console.info(`Non-Steam:\t\t${Object.keys(steam.shortcuts.shortcuts).length}`)
+    }
+    console.info(`Appinfo Entries:\t${steam.appinfo.length}`)
+    if (catData[ 0 ].length !== 0 && catData[ 1 ] !== 0) {
+      console.info(`Categorized Apps:\t${catData[ 1 ]}`)
+      console.info(`Categories:\t\t${catData[ 0 ].length} (${catData[ 0 ].join(', ')})`)
+    }
+  } catch (err) {
+    console.error(err)
+    process.exit(1)
+  }
 }
 
 run()

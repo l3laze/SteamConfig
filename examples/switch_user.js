@@ -23,7 +23,7 @@ async function run () {
     }
   }
 
-  await steam.loadRegistryLM()
+  await steam.loadRegistry()
   await steam.loadLoginusers()
 
   let userKeys = Object.keys(steam.loginusers.users)
@@ -37,13 +37,13 @@ async function run () {
     if (options.user !== null) {
       if (steam.loginusers.users[userKeys[ i ]].AccountName === options.user || steam.loginusers.users[userKeys[ i ]].PersonaName === options.user) {
         steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser = steam.loginusers.users[userKeys[ i ]].AccountName
-        await steam.saveTextVDF(steam.getPathTo('registry'), steam.registry)
+        await steam.saveRegistry()
         console.info(`Switched to ${steam.loginusers.users[userKeys[ i ]].PersonaName}.`)
         process.exit(0)
       }
     } else if (steam.loginusers.users[userKeys[ i ]].AccountName !== steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser) {
       steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser = steam.loginusers.users[userKeys[ i ]].AccountName
-      await steam.saveTextVDF(steam.getPathTo('registry'), steam.registry)
+      await steam.saveRegistry()
       console.info(`Switched to ${steam.loginusers.users[userKeys[ i ]].PersonaName}.`)
       process.exit(0)
     }

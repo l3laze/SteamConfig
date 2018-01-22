@@ -1,14 +1,21 @@
 {
   "name": "steamconfig",
-  "version": "0.0.1",
-  "description": "API to access the Steam Client's configuration.",
+  "version": "0.0.2",
   "main": "index.js",
   "author": "l3l_aze <l3l_aze@yahoo.com>",
+  "copyright": "Copyright © 2017 ${author}",
+  "description": "API to help read/write the Steam Client's configuration.",
   "homepage": "https://github.com/l3laze/SteamConfig",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+github.com/l3laze/SteamConfig.git"
+  },
   "dependencies": {
     "binary-vdf": "^0.1.0",
     "bluebird": "^3.5.1",
     "fast-xml-parser": "^2.8.3",
+    "rage-edit": "^1.0.0",
     "simple-vdf2": "^1.1.1",
     "steam-shortcut-editor": "^3.1.1",
     "steamid": "^1.1.0",
@@ -17,12 +24,12 @@
   "devDependencies": {
     "cli": "^1.0.1",
     "mocha": "^4.1.0",
-    "snazzy": "^7.0.0",
     "standard": "^10.0.3",
     "steam-dummy": "^0.0.1"
   },
   "scripts": {
-    "testm": "mocha test",
-    "test": "yarn standard | snazzy && mocha test"
+    "lint": "yarn standard",
+    "test": "mocha test",
+    "full-test": "yarn lint && yarn test"
   }
 }
