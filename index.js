@@ -56,12 +56,14 @@ async function loadTextVDF (filePath) {
       let reason = ''
 
       if (err.code === 'ENOENT') {
-        reason = 'it does not exist.'
+        reason = 'it does not exist'
       } else if (err.code === 'EACCES') {
-        reason = 'it is not accessible.'
-      } else if (err.message.indexOf('VDF.') !== -1) { // VDF.parse or VDF.stringify
+        reason = 'it is not accessible'
+      } else if (err.message.toLowerCase().indexOf('vdf') !== -1) { // VDF.parse or VDF.stringify
         if ((err.message.indexOf('invalid syntax') + err.message.indexOf('open parentheses somewhere')) > -1) {
-          reason = 'the data is invalid (parsing error).'
+          reason = 'the data is invalid (parsing error)'
+        } else if (err.message.indexOf('does not exist') !== -1) {
+          reason = 'it does not exist'
         }
       } else {
         reason = `${err.message} ("${err.code || err.name || 'error'}")`
@@ -190,8 +192,12 @@ SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
 SteamConfig.prototype.loadRegistry = async function loadRegistry () {
   let data
 
-  if (platform === 'darwin' || platform === 'linux') {
+  if (platform === 'darwin') {
     let filePath = path.join(this.loc, 'registry.vdf')
+
+    data = await loadTextVDF(filePath)
+  } else if (platform === 'linux') {
+    let filePath = path.join(this.loc, '..', 'registry.vdf')
 
     data = await loadTextVDF(filePath)
   } else if (platform === 'win32') {
@@ -204,7 +210,7 @@ SteamConfig.prototype.loadRegistry = async function loadRegistry () {
 
 SteamConfig.prototype.saveRegistry = async function saveRegistry () {
   if (platform === 'darwin' || platform === 'linux') {
-    await fs.writeFileAsync(this.getPathTo('registry'), this.registry)
+    await fs.writeFileAsync(this.getPathTo('registry'), VDF.stringify(this.registry, true))
   } else if (platform === 'win32') {
     winreg.set('language', this.registry.Registry.HKCU.Software.Valve.Steam.language)
     winreg.set('AutoLoginUser', this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser)
@@ -385,14 +391,14 @@ SteamConfig.prototype.setUser = function setUser (toUser) {
 SteamConfig.prototype.detectPath = function detectPath () {
   let detected = null
 
-  if (platform.indexOf('win32') !== -1) {  // TODO: Windows
+  if (platform.indexOf('win32') !== -1) {
     if (arch === 'ia32') {
       detected = path.join('C:\\', 'Program Files (x86)', 'Steam')
     } else {
       detected = path.join('C:\\', 'Program Files', 'Steam')
     }
   } else if (platform === 'linux') {
-    detected = path.join(home, '.local', 'steam') // TODO: Linux
+    detected = path.join(home, '.steam', 'steam')
   } else if (platform === 'darwin') {
     detected = path.join(home, 'Library', 'Application Support', 'Steam')
   }
@@ -413,10 +419,8 @@ SteamConfig.prototype.detectPath = function detectPath () {
       reason = 'the default path does not exist (partial).'
     } else if (err.code === 'EACCES') {
       reason = 'the default path is not accessible.'
-    } else if (err.message.indexOf('') !== -1) {
-      reason = ''
     } else {
-      reason = `: ${err.message.toLowerCase()} ("${err.code || err.name || 'error'}" @ line ${getLine(err)})`
+      reason = `${err.message.toLowerCase()} ("${err.code || err.name || 'error'}" @ line ${getLine(err)})`
     }
 
     throw new Error(`Failed to detect path because ${reason}.`)
@@ -433,7 +437,11 @@ SteamConfig.prototype.getPathTo = function (what) {
   }
 
   if (what === 'registry') {
-    return path.join(this.loc, 'registry.vdf')
+    if (platform === 'darwin') {
+      return path.join(this.loc, 'registry.vdf')
+    } else if (platform === 'linux') {
+      return path.join(this.loc, '..', 'registry.vdf')
+    }
   } else if (what === 'appinfo') {
     return path.join(this.loc, 'appcache', 'appinfo.vdf')
   } else if (what === 'config') {

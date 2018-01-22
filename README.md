@@ -1,6 +1,6 @@
 # SteamConfig
 
-A library to accompany the [Steam-Data](https://github.com/l3laze/Steam-Data) project.
+A cross-platform library to accompany the [Steam-Data](https://github.com/l3laze/Steam-Data) project. Provides methods to load/save the Steam configuration data including detecting the default installation path.
 
 
 [![Dependencies](https://img.shields.io/david/expressjs/express.svg)](https://github.com/l3laze/SteamConfig)
@@ -15,6 +15,16 @@ A library to accompany the [Steam-Data](https://github.com/l3laze/Steam-Data) pr
 
 
 ----
+
+
+# Cross-platform
+
+
+SteamConfig has been developed for use on
+
+  * Mac OS X (tested on 10.11.6)
+  * Ubuntu Linux (tested on 16.0.4)
+  * Windows (tested on 7 and 10)
 
 
 # Installation
@@ -41,7 +51,21 @@ let steam = new SteamConfig()
 ```
 
 
-For the "full" documentation, see `API`.
+See [API](https://github.com/l3laze/SteamConfig/blob/master/API.md) for more information.
 
 
 ----
+
+
+# Warning
+
+SteamConfig is in no way affiliated with, authorized, maintained, sponsored or endorsed by Valve or any employees of Valve.
+
+
+----
+
+
+# License
+
+
+Distributed under the `MIT License`. See [LICENSE](https://github.com/l3laze/SteamConfig/blob/master/LICENSE.md) for more information.

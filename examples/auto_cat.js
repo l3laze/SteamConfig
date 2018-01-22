@@ -14,9 +14,9 @@ let steam = new SteamConfig()
 let options = cli.parse({
   path: ['p', 'Path to Steam installation.', 'path', null],
   user: ['u', 'User to auto-categorize games for.', 'string', null],
-  developer: ['d', 'Add name of developer as a category', 'boolean', false],
-  publisher: ['b', 'Add name of publisher as a category', 'boolean', false],
-  metacritic: ['m', 'Add metacritic score as a category', 'boolean', false],
+  dev: ['d', 'Add name of developer as a category', 'boolean', false],
+  pub: ['b', 'Add name of publisher as a category', 'boolean', false],
+  meta: ['m', 'Add metacritic score as a category', 'boolean', false],
   noMeta: ['n', 'Add games without a metacritic score to a "No Metacritic" category', 'boolean', false],
   tags: ['t', 'Categorize by popular tags', 'boolean', false],
   numTags: ['g', 'Number of tags to use', 'number', 1],
@@ -113,17 +113,17 @@ async function run () {
   let hasOption = false
   let mode = (options.remove === false ? 'Adding' : 'Removing')
 
-  if (options.publisher) {
+  if (options.pub) {
     hasOption = true
     console.info(`${mode} publisher as category...`)
   }
 
-  if (options.developer) {
+  if (options.dev) {
     hasOption = true
     console.info(`${mode} developer as category...`)
   }
 
-  if (options.metacritic) {
+  if (options.meta) {
     hasOption = true
     console.info(`${mode} metacritic score as category...`)
   }
@@ -156,24 +156,24 @@ async function run () {
         app = Object.assign({}, steam.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps[ gamesList[ i ].appID ])
       }
 
-      if (options.publisher && !options.remove && info.entries.hasOwnProperty('extended') && info.entries.extended.hasOwnProperty('publisher')) {
-        app = addCat(app, info.entries.extended.publisher)
+      if (options.pub && !options.remove && info.entries.hasOwnProperty('extended') && info.entries.extended.hasOwnProperty('publisher')) {
+        app = addCat(app, info.entries.extended.publisher.trim())
       } else if (options.remove && info.entries.hasOwnProperty('extended') && info.entries.extended.hasOwnProperty('publisher')) {
-        app = removeCat(app, info.entries.extended.publisher)
+        app = removeCat(app, info.entries.extended.publisher.trim())
       }
 
-      if (options.developer && !options.remove && info.entries.hasOwnProperty('extended') && info.entries.extended.hasOwnProperty('developer')) {
-        app = addCat(app, info.entries.extended.developer)
+      if (options.dev && !options.remove && info.entries.hasOwnProperty('extended') && info.entries.extended.hasOwnProperty('developer')) {
+        app = addCat(app, info.entries.extended.developer.trim())
       } else if (options.remove && info.entries.hasOwnProperty('extended') && info.entries.extended.hasOwnProperty('developer')) {
-        app = removeCat(app, info.entries.extended.developer)
+        app = removeCat(app, info.entries.extended.developer.trim())
       }
 
-      if (options.metacritic) {
+      if (options.meta) {
         if (info.entries.hasOwnProperty('common') && info.entries.common.hasOwnProperty('metacritic_score')) {
           if (!options.remove) {
-            app = addCat(app, info.entries.common.metacritic_score)
+            app = addCat(app, ('' + info.entries.common.metacritic_score).trim())
           } else {
-            app = removeCat(app, info.entries.common.metacritic_score)
+            app = removeCat(app, ('' + info.entries.common.metacritic_score).trim())
           }
         } else if (options.noMeta && !options.remove) {
           app = addCat(app, 'No metacritic')
@@ -189,9 +189,9 @@ async function run () {
         for (x = 0; x < options.numTags && x < keys.length; x += 1) {
           let tag = getTagById(info.entries.common.store_tags[keys[ x ]])
           if (options.remove) {
-            app = removeCat(app, tag)
+            app = removeCat(app, tag.trim())
           } else {
-            app = addCat(app, tag)
+            app = addCat(app, tag.trim())
           }
         }
       }
@@ -207,7 +207,11 @@ async function run () {
       }
     }
 
-    console.info(`${Object.keys(steam.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps).length} items categorized.`)
+    if (steam.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps) {
+      console.info(`${Object.keys(steam.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps).length} items categorized.`)
+    } else {
+      console.info(`No 'Apps' data.`)
+    }
 
     steam.saveTextVDF(steam.getPathTo('sharedconfig'), steam.sharedconfig)
   } catch (err) {
@@ -255,8 +259,8 @@ function removeCat (app, cat) {
   }
 
   for (let i = 0; i < keys.length; i += 1) {
-    if (app.tags[keys[ i ]] !== cat) {
-      removed.tags[ newTags ] = app.tags[keys[ i ]]
+    if (app.tags[keys[ i ]].trim() !== cat) {
+      removed.tags[ newTags ] = app.tags[keys[ i ]].trim()
       newTags += 1
     }
   }

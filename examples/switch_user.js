@@ -26,8 +26,6 @@ async function run () {
   await steam.loadRegistry()
   await steam.loadLoginusers()
 
-  console.info(JSON.stringify(steam.registry))
-
   let userKeys = Object.keys(steam.loginusers.users)
 
   if (options.user === null && userKeys.length > 2) {
