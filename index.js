@@ -9,10 +9,6 @@ const SVDF = BB.promisifyAll(require('steam-shortcut-editor'))
 const SteamID = require('steamid')
 const {Registry} = require('rage-edit')
 
-const platform = require('os').platform()
-const arch = require('os').arch()
-const home = require('os').homedir()
-
 const winreg = new Registry('HKCU\\Software\\Valve\\Steam')
 
 function SteamConfig () {
@@ -31,6 +27,10 @@ function SteamConfig () {
   this.sharedconfig = null
   this.localconfig = null
   this.shortcuts = null
+
+  this.platform = require('os').platform()
+  this.arch = require('os').arch()
+  this.home = require('os').homedir()
 }
 
 function getLine (err) {
@@ -179,6 +179,48 @@ SteamConfig.prototype.saveTextVDF = async function saveTextVDF (filePath, data) 
   }
 }
 
+SteamConfig.prototype.saveBinaryVDF = async function saveBinaryVDF (filePath, data, btype) {
+  if (typeof filePath !== 'string') {
+    throw new TypeError(`Failed to save filePath because it is invalid -- type is "${typeof filePath}", but should be "string".`)
+  }
+
+  if (typeof data !== 'object') {
+    throw new TypeError(`Failed to save ${filePath} because the data is invalid -- type is "${typeof data}", but should be "object".`)
+  }
+
+  if (typeof btype !== 'string') {
+    throw new Error(`Failed to save ${filePath} because btype is invalid -- type is "${typeof btype}", but it should be "string".`)
+  } else {
+    btype = btype.toLowerCase()
+
+    if (btype !== 'appinfo' && btype !== 'packageinfo' && btype !== 'shortcuts') {
+      throw new Error(`Failed to save ${filePath} because btype is invalid -- it is ${btype}, but it should be 'appinfo', 'packageinfo', or 'shortcuts'.`)
+    } else if (btype !== 'shortcuts') {
+      throw new Error(`${btype} cannot currently be saved -- no implementation.`)
+    }
+  }
+
+  try {
+    if (btype === 'shortcuts') {
+      data = await SVDF.writeBufferAsync(data)
+    }
+
+    await fs.writeFileAsync(filePath, data)
+  } catch (err) {
+    let reason = ''
+
+    if (err.code === 'EACCES') {
+      reason = 'it is not accessible.'
+    } else if ((err.message.indexOf('First input parameter is not an object') + err.message.indexOf('a key has value of type other than string or object')) !== -1) {
+      reason = 'the data is invalid (parsing error)'
+    } else {
+      reason = `${err.message} ("${err.code || err.name || 'error'}")`
+    }
+
+    throw new Error(`Failed to save ${filePath} because ${reason}.`)
+  }
+}
+
 SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
   if (typeof dir !== 'string') {
     throw new TypeError(`Failed to setInstallPath because it is invalid -- type is "${typeof dir}", but should be "string".`)
@@ -192,15 +234,15 @@ SteamConfig.prototype.setInstallPath = function setInstallPath (dir) {
 SteamConfig.prototype.loadRegistry = async function loadRegistry () {
   let data
 
-  if (platform === 'darwin') {
+  if (this.platform === 'darwin') {
     let filePath = path.join(this.loc, 'registry.vdf')
 
     data = await loadTextVDF(filePath)
-  } else if (platform === 'linux') {
+  } else if (this.platform === 'linux') {
     let filePath = path.join(this.loc, '..', 'registry.vdf')
 
     data = await loadTextVDF(filePath)
-  } else if (platform === 'win32') {
+  } else if (this.platform === 'win32') {
     data = await loadWinReg()
     // throw new Error('This platform is not currently supported.')
   }
@@ -209,9 +251,9 @@ SteamConfig.prototype.loadRegistry = async function loadRegistry () {
 }
 
 SteamConfig.prototype.saveRegistry = async function saveRegistry () {
-  if (platform === 'darwin' || platform === 'linux') {
+  if (this.platform === 'darwin' || this.platform === 'linux') {
     await fs.writeFileAsync(this.getPathTo('registry'), VDF.stringify(this.registry, true))
-  } else if (platform === 'win32') {
+  } else if (this.platform === 'win32') {
     winreg.set('language', this.registry.Registry.HKCU.Software.Valve.Steam.language)
     winreg.set('AutoLoginUser', this.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser)
     winreg.set('RememberPassword', this.registry.Registry.HKCU.Software.Valve.Steam.RememberPassword)
@@ -391,16 +433,16 @@ SteamConfig.prototype.setUser = function setUser (toUser) {
 SteamConfig.prototype.detectPath = function detectPath () {
   let detected = null
 
-  if (platform.indexOf('win32') !== -1) {
-    if (arch === 'ia32') {
+  if (this.platform.indexOf('win32') !== -1) {
+    if (this.arch === 'ia32') {
       detected = path.join('C:\\', 'Program Files (x86)', 'Steam')
     } else {
       detected = path.join('C:\\', 'Program Files', 'Steam')
     }
-  } else if (platform === 'linux') {
-    detected = path.join(home, '.steam', 'steam')
-  } else if (platform === 'darwin') {
-    detected = path.join(home, 'Library', 'Application Support', 'Steam')
+  } else if (this.platform === 'linux') {
+    detected = path.join(this.home, '.steam', 'steam')
+  } else if (this.platform === 'darwin') {
+    detected = path.join(this.home, 'Library', 'Application Support', 'Steam')
   }
 
   try {
@@ -437,9 +479,9 @@ SteamConfig.prototype.getPathTo = function (what) {
   }
 
   if (what === 'registry') {
-    if (platform === 'darwin') {
+    if (this.platform === 'darwin') {
       return path.join(this.loc, 'registry.vdf')
-    } else if (platform === 'linux') {
+    } else if (this.platform === 'linux') {
       return path.join(this.loc, '..', 'registry.vdf')
     }
   } else if (what === 'appinfo') {
@@ -454,13 +496,19 @@ SteamConfig.prototype.getPathTo = function (what) {
     if (this.user !== null && this.user.hasOwnProperty('accountID')) {
       return path.join(this.loc, 'userdata', this.user.accountID, '7', 'remote', 'sharedconfig.vdf')
     } else {
-      throw new Error('User must be set before getPathTo can get be used for sharedconfig.vdf.')
+      throw new Error('User must be set before getPathTo can find sharedconfig.vdf.')
     }
   } else if (what === 'localconfig') {
     if (this.user !== null && this.user.hasOwnProperty('accountID')) {
       return path.join(this.loc, 'userdata', this.user.accountID, 'config', 'localconfig.vdf')
     } else {
-      throw new Error('User must be set before getPathTo can be used for localconfig.vdf.')
+      throw new Error('User must be set before getPathTo can find localconfig.vdf.')
+    }
+  } else if (what === 'shortcuts') {
+    if (this.user !== null && this.user.hasOwnProperty('accountID')) {
+      return path.join(this.loc, 'userdata', this.user.accountID, 'config', 'shortcuts.vdf')
+    } else {
+      throw new Error('User must be set before getPathTo can find shortcuts.vdf.')
     }
   } else {
     throw new Error(`Unknown file for getPathTo: ${what}`)

@@ -25,8 +25,6 @@ async function run () {
     await steam.loadSharedconfig()
     await steam.loadLocalconfig()
     await steam.loadShortcuts()
-
-    console.info(JSON.stringify(steam.shortcuts))
   } catch (err) {
     if ((err.message.indexOf('Failed to load ') !== -1 || err.message.indexOf('Failed to save ')) && err.message.indexOf(' because ') !== -1) {
       console.error(err.message)
@@ -73,7 +71,6 @@ async function logData () {
     console.info(`Install location:\t${steam.loc}`)
     console.info(`Users:\t\t\t${Object.keys(steam.loginusers.users).length}`)
     console.info(`Active Steam user:\t${steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser}`)
-    console.info(`SteamConfig User:\t${steam.user.PersonaName} (${steam.user.AccountName})`)
     console.info(`Library Folders:\t${steam.nondefaultLibraryfolders.length + 1}`)
     console.info(`Apps:\t\t\t${steam.steamapps.length + (steam.shortcuts !== null ? Object.keys(steam.shortcuts.shortcuts).length : 0)}`)
     console.info(`Steam apps:\t\t${steam.steamapps.length}`)

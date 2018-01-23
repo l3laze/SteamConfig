@@ -10,7 +10,13 @@ const cli = require('cli')
 const WebRequest = require('web-request')
 const fxp = require('fast-xml-parser')
 
-let steam = new SteamConfig()
+/*
+ * Slightly increased console width for 'cli' because
+ *  it defaults to 70/25, which is often too small.
+ */
+cli.width = 80
+cli.option_width = 35
+
 let options = cli.parse({
   path: ['p', 'Path to Steam installation.', 'path', null],
   user: ['u', 'User to auto-categorize games for.', 'string', null],
@@ -22,6 +28,9 @@ let options = cli.parse({
   numTags: ['g', 'Number of tags to use', 'number', 1],
   remove: ['r', 'Remove instead of add', 'boolean', false]
 })
+
+let steam = new SteamConfig()
+
 let tagList
 
 async function run () {
