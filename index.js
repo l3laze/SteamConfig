@@ -1,3 +1,8 @@
+/**
+ * @file index.js
+ * @author Tom <l3l_aze@yahoo.com>
+ */
+
 'use strict'
 
 const BB = require('bluebird').Promise
@@ -5,12 +10,32 @@ const fs = BB.promisifyAll(require('fs'))
 const path = require('path')
 const VDF = require('simple-vdf2')
 const BVDF = require('binary-vdf')
+const BVDF2 = require('./bvdf.js')
 const SVDF = BB.promisifyAll(require('steam-shortcut-editor'))
 const SteamID = require('steamid')
 const {Registry} = require('rage-edit')
 
 const winreg = new Registry('HKCU\\Software\\Valve\\Steam')
 
+/**
+ * Represents the configuration of the Steam client.
+ * @constructor
+ * @property {string} loc - The install location of the Steam client.
+ * @property {string} user - The user for SteamConfig to load/save Steam configuration data for.
+ * @property {string} nondefaultLibraryfolders - The non-default Steam Library Folders for this installation.
+ * @property {string} registry - The value of the Windows Registry, or Steam/registry.vdf on Linux/Mac.
+ * @property {string} config - The value of the file Steam/config/config.vdf.
+ * @property {string} loginusers - The value of the file Steam/config/loginusers.vdf.
+ * @property {string} libraryfolders - The value of the file Steam/steamapps/libraryfolders.vdf.
+ * @property {string} steamapps - Array of the appmanifest_#.acf file(s) from Steam/steamapps.
+ * @property {string} appinfo - The value of the Binary VDF file Steam/appcache/appinfo.vdf.
+ * @property {string} sharedconfig - The value of the file Steam/userdata/{accountID}/7/remote/sharedconfig.vdf.
+ * @property {string} localconfig - The value of the file Steam/userdata/{accountID}/config/sharedconfig.vdf.
+ * @property {string} shortcuts - The value of the file Steam/userdata/{accountID}/config/shortcuts.vdf.
+ * @property {string} platform - The current platform (OS) -- darwin = macOS, linux = Linux, win32 = Windows.
+ * @property {string} arch - The current architecture (32 or 64-bit) -- ia32 = x86, ia64 = x64ia32.
+ * @property {string} home - The home directory for the system; based on platform.
+ */
 function SteamConfig () {
   this.loc = null
   this.user = null
@@ -21,7 +46,6 @@ function SteamConfig () {
   this.loginusers = null
   this.libraryfolders = null
   this.steamapps = null
-  this.userdata = null
   this.appinfo = null
   this.packageinfo = null
   this.sharedconfig = null
@@ -33,6 +57,11 @@ function SteamConfig () {
   this.home = require('os').homedir()
 }
 
+/**
+ * Parses the error stack to find the previous line in the stack.
+ * @internal
+ * @returns {number} The
+ */
 function getLine (err) {
   let stack = err.stack.split('\n')
   let line = stack[1 + 1].split(':')
@@ -77,9 +106,6 @@ async function loadTextVDF (filePath) {
 }
 
 async function loadBinaryVDF (filePath, btype) {
-  let data
-  let stream
-
   if (filePath === null) {
     throw new TypeError(`Failed to load filePath because it is invalid -- type is "${typeof filePath}", but it should be "string".`)
   } else if (!fs.existsSync(filePath)) {
@@ -94,9 +120,10 @@ async function loadBinaryVDF (filePath, btype) {
 
   if (btype !== 'appinfo' && btype !== 'packageinfo' && btype !== 'shortcuts') {
     throw new Error(`Failed to load ${filePath} because btype is invalid -- the format "${btype}" is not recognized.`)
-  } else if (btype === 'packageinfo') {
-    throw new Error(`Failed to load ${filePath} because ${btype} is not currently supported.`)
   } else {
+    let data
+    let stream
+
     if (btype === 'appinfo') {
       try {
         stream = await fs.createReadStream(filePath)
@@ -127,29 +154,13 @@ async function loadBinaryVDF (filePath, btype) {
       }
 
       return data
-    }
-  }
-}
-
-async function loadWinReg () {
-  return {
-    'Registry': {
-      'HKCU': {
-        'Software': {
-          'Valve': {
-            'Steam': {
-              'language': await winreg.get('language'),
-              'RunningAppID': await winreg.get('RunningAppID'),
-              'Apps': await winreg.get('Apps'),
-              'AutoLoginUser': await winreg.get('AutoLoginUser'),
-              'RememberPassword': await winreg.get('RememberPassword'),
-              'SourceModInstallPath': await winreg.get('SourceModInstallPath'),
-              'AlreadyRetriedOfflineMode': await winreg.get('AlreadyRetriedOfflineMode'),
-              'StartupMode': await winreg.get('StartupMode'),
-              'SkinV4': await winreg.get('SkinV4')
-            }
-          }
-        }
+    } else if (btype === 'packageinfo') {
+      try {
+        stream = fs.createReadStream(filePath)
+        data = BVDF.readPackageInfo(stream)
+        return data
+      } catch (err) {
+        throw new Error(err)
       }
     }
   }
@@ -243,7 +254,27 @@ SteamConfig.prototype.loadRegistry = async function loadRegistry () {
 
     data = await loadTextVDF(filePath)
   } else if (this.platform === 'win32') {
-    data = await loadWinReg()
+    data = {
+      'Registry': {
+        'HKCU': {
+          'Software': {
+            'Valve': {
+              'Steam': {
+                'language': await winreg.get('language'),
+                'RunningAppID': await winreg.get('RunningAppID'),
+                'Apps': await winreg.get('Apps'),
+                'AutoLoginUser': await winreg.get('AutoLoginUser'),
+                'RememberPassword': await winreg.get('RememberPassword'),
+                'SourceModInstallPath': await winreg.get('SourceModInstallPath'),
+                'AlreadyRetriedOfflineMode': await winreg.get('AlreadyRetriedOfflineMode'),
+                'StartupMode': await winreg.get('StartupMode'),
+                'SkinV4': await winreg.get('SkinV4')
+              }
+            }
+          }
+        }
+      }
+    }
     // throw new Error('This platform is not currently supported.')
   }
 
@@ -272,9 +303,25 @@ SteamConfig.prototype.loadAppinfo = async function loadAppinfo () {
  *
  */
 SteamConfig.prototype.loadPackageinfo = async function loadPackageinfo () {
+  // throw new Error('Parsing packageinfo is not currently supported.')
   let filePath = path.join(this.loc, 'appcache', 'packageinfo.vdf')
 
-  this.packageinfo = await loadBinaryVDF(filePath)
+  let buf = Buffer.from(await fs.readFileAsync(filePath))
+  let off = 0
+  let pinfo = {
+    v1: null,
+    signature: null,
+    v2: null,
+    universe: null
+  }
+
+  pinfo.v1 = `0x${buf.readUInt8(off).toString(16)}`
+  pinfo.signature = `0x${buf.readUInt16LE(off += 1).toString(16)}`
+  pinfo.v2 = `0x${buf.readUInt8(off += 2).toString(16)}`
+  pinfo.universe = buf.readUInt32LE(off += 1)
+  pinfo.packages = BVDF2.parse(buf.slice(off))
+
+  this.packageinfo = pinfo
 }
 
 SteamConfig.prototype.loadConfig = async function loadConfig () {
@@ -486,6 +533,8 @@ SteamConfig.prototype.getPathTo = function (what) {
     }
   } else if (what === 'appinfo') {
     return path.join(this.loc, 'appcache', 'appinfo.vdf')
+  } else if (what === 'packageinfo') {
+    return path.join(this.loc, 'appcache', 'packageinfo.vdf')
   } else if (what === 'config') {
     return path.join(this.loc, 'config', 'config.vdf')
   } else if (what === 'loginusers') {

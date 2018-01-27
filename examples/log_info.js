@@ -16,7 +16,7 @@ async function run () {
     await steam.loadLibraryfolders()
     await steam.loadSteamapps()
     await steam.loadAppinfo()
-    // await steam.loadPackageinfo()
+    await steam.loadPackageinfo()
 
     if (steam.user === null) {
       throw new Error(`There is no user associated with the Steam installation @ ${steam.loc}`)
@@ -81,6 +81,9 @@ async function logData () {
     if (catData[ 0 ].length !== 0 && catData[ 1 ] !== 0) {
       console.info(`Categorized Apps:\t${catData[ 1 ]}`)
       console.info(`Categories:\t\t${catData[ 0 ].length} (${catData[ 0 ].join(', ')})`)
+    }
+    if (steam.packageinfo) {
+      console.info(`Packageinfo Entries:\t${steam.packageinfo.packages.length}`)
     }
   } catch (err) {
     console.error(err)
