@@ -1,4 +1,3 @@
-const long = require('long') // eslint-disable-line no-unused-vars
 const ByteBuffer = require('bytebuffer')
 
 const Type = {
@@ -13,39 +12,110 @@ const Type = {
   End: 8
 }
 
-exports.parse = function (data) {
+exports.parseAppInfo = function (data) {
   let buffer
   let len = data.length
+  let first = true
 
   buffer = ByteBuffer.wrap(data, 'hex', true).resize(len)
   buffer.LE(true)
   data = []
 
-  if (buffer.constructor !== ByteBuffer) {
-    buffer = ByteBuffer.wrap(buffer)
-  }
+  do {
+    try {
+      let aid = buffer.readUint32().toString(10) // eslint-disable-line no-unused-vars
+      if (aid === 0x00000000) {
+        return data
+      }
+
+      let skip = (first ? 49 : 48)
+      let skipped = []
+      first = false
+      do {
+        skipped.push(buffer.readUint8())
+      } while ((skip -= 1) !== 0)
+      /*
+        let size = buffer.readUint32() // eslint-disable-line no-unused-vars
+        let state = buffer.readUint32() // eslint-disable-line no-unused-vars
+        let updated = new Date(buffer.readUint32() * 1000).toString()
+        let accessToken = buffer.readUint64() // eslint-disable-line no-unused-vars
+        let sha1 = []
+        do {
+          sha1.push(buffer.readUint8())
+        } while (sha1.length < 20)
+
+        ({
+          appid: aid,
+          sizeOf: size,
+          infoState: state,
+          lastUpdated: updated,
+          token: accessToken,
+          hash: sha1,
+          change: changeNumber
+        })
+      */
+
+      let info = exports.decode(buffer)
+
+      if (info.config && info.config.steamcontrollertemplateindex && info.config.steamcontrollertemplateindex < 0) {
+        /*
+         * Based on https://stackoverflow.com/a/28519774/7665043
+         */
+        info.config.steamcontrollertemplateindex += (1 << 30) * 4
+      }
+      data.push({
+        'id': info.appid,
+        'name': 'appinfo',
+        'entries': info
+      })
+    } catch (err) {
+      if (err.message.indexOf('Illegal offset') !== -1 && err.message.indexOf(len) !== -1) {
+        console.error(`Parsed: ${data.length}`)
+        break
+      } else {
+        console.error(`Parsed: ${data.length}`)
+        console.error(err)
+        process.exit(1)
+      }
+    }
+  } while (true)
+
+  return data
+}
+
+exports.parsePackageInfo = function (data) {
+  let buffer
+  let len = data.length
+
+  buffer = ByteBuffer.wrap(data, 'hex', true).resize(len)
+  data = []
 
   while (true) {
     try {
-      let pid = ByteBuffer.fromUTF8(buffer.readCString()).toString('hex') // eslint-disable-line no-unused-vars
+      let pid = buffer.readCString() // eslint-disable-line no-unused-vars
       let hash = [buffer.readUint32(), buffer.readUint32(), buffer.readUint32(), buffer.readUint32(), buffer.readUint32()].toString(16)
-      data.push(parseEntry(buffer, hash))
+      data.push(exports.decode(buffer, hash))
     } catch (err) {
       if (err.message.indexOf('Index out of range') !== -1 && err.message.indexOf(len) !== -1) {
         break
+      } else {
+        console.error(err)
+        process.exit(1)
       }
-      console.error(err)
-      process.exit(1)
     }
   }
 
   return data
 }
 
-function parseEntry (buffer) {
+exports.parseShortcuts = function (data) {
+  return exports.decode(ByteBuffer.wrap(data, 'hex', true).resize(data.length))
+}
+
+exports.decode = function decode (buffer) {
   let object = {}
 
-  while (true) {
+  do {
     let type = buffer.readUint8()
 
     if (type === Type.End) {
@@ -55,13 +125,10 @@ function parseEntry (buffer) {
 
     switch (type) {
       case Type.None:
-        object[name] = parseEntry(buffer)
+        object[name] = exports.decode(buffer)
         break
 
       case Type.String:
-        object[name] = buffer.readCString()
-        break
-
       case Type.WideString:
         object[name] = buffer.readCString()
         break
@@ -80,7 +147,7 @@ function parseEntry (buffer) {
         object[name] = buffer.readFloat()
         break
     }
-  }
+  } while (true)
 
   return object
 }

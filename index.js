@@ -298,9 +298,9 @@ SteamConfig.prototype.loadAppinfo = async function loadAppinfo () {
   this.appinfo = await loadBinaryVDF(filePath, 'appinfo')
 }
 
-/*
- * Currently not supported -- need a parser for packageinfo.vdf.
- *
+/**
+ * Load the binary VDF file packageinfo.vdf
+ * @method
  */
 SteamConfig.prototype.loadPackageinfo = async function loadPackageinfo () {
   // throw new Error('Parsing packageinfo is not currently supported.')
@@ -309,19 +309,45 @@ SteamConfig.prototype.loadPackageinfo = async function loadPackageinfo () {
   let buf = Buffer.from(await fs.readFileAsync(filePath))
   let off = 0
   let pinfo = {
-    v1: null,
-    signature: null,
-    v2: null,
-    universe: null
+    signature: {
+      v1: null,
+      magic: null,
+      v2: null
+    },
+    universe: null,
+    packages: null
   }
 
-  pinfo.v1 = `0x${buf.readUInt8(off).toString(16)}`
-  pinfo.signature = `0x${buf.readUInt16LE(off += 1).toString(16)}`
-  pinfo.v2 = `0x${buf.readUInt8(off += 2).toString(16)}`
+  pinfo.signature.v1 = `0x${buf.readUInt8(off).toString(16)}`
+  pinfo.signature.magic = `0x${buf.readUInt16LE(off += 1).toString(16)}`
+  pinfo.signature.v2 = `0x${buf.readUInt8(off += 2).toString(16)}`
   pinfo.universe = buf.readUInt32LE(off += 1)
-  pinfo.packages = BVDF2.parse(buf.slice(off))
+  pinfo.packages = BVDF2.parsePackageInfo(buf.slice(off))
 
   this.packageinfo = pinfo
+}
+
+/**
+ * Load the binary VDF file packageinfo.vdf
+ * @method
+ */
+SteamConfig.prototype.loadAppinfo2 = async function loadAppinfo2 () {
+  // throw new Error('Parsing packageinfo is not currently supported.')
+  let filePath = path.join(this.loc, 'appcache', 'appinfo.vdf')
+
+  let buf = Buffer.from(await fs.readFileAsync(filePath))
+  let off = 0
+  let ainfo = {
+    signature: {
+      v1: `0x${buf.readUInt8(off).toString(16)}`,
+      magic: `0x${buf.readUInt16LE(off += 1).toString(16)}`,
+      v2: `0x${buf.readUInt8(off += 2).toString(16)}`
+    },
+    universe: buf.readUInt32LE(off += 1),
+    apps: BVDF2.parseAppInfo(buf.slice(off))
+  }
+
+  this[ 'appinfo2' ] = ainfo
 }
 
 SteamConfig.prototype.loadConfig = async function loadConfig () {
@@ -455,6 +481,14 @@ SteamConfig.prototype.loadShortcuts = async function loadShortcuts () {
       throw new Error(`Failed to load shortcuts as a text VDF file because${reason}.`)
     }
   }
+}
+
+SteamConfig.prototype.loadShortcuts2 = async function loadShortcuts2 () {
+  let filePath = path.join(this.loc, 'userdata', this.user.accountID, 'config', 'shortcuts.vdf')
+
+  let buf = Buffer.from(await fs.readFileAsync(filePath))
+  let off = 0
+  this.shortcuts2 = BVDF2.parseShortcuts(buf.slice(off))
 }
 
 SteamConfig.prototype.setUser = function setUser (toUser) {
