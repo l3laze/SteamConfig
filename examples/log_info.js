@@ -71,7 +71,6 @@ async function getCatInfo () {
 
 async function logData () {
   try {
-    let cachePath = path.join(__dirname, 'data')
     let catData = await getCatInfo()
     console.info(`Install location:\t${steam.loc}`)
     console.info(`Users:\t\t\t${Object.keys(steam.loginusers.users).length}`)
@@ -83,7 +82,7 @@ async function logData () {
       console.info(`Shortcuts1:\t\t${Object.keys(steam.shortcuts.shortcuts).length}`)
     }
     if (steam.shortcuts2 !== null) {
-      console.info(`Shortcuts2:\t\t${Object.keys(steam.shortcuts2.shortcuts).length}`)
+      console.info(`Shortcuts2:\t\t${steam.shortcuts2.length}`)
     }
     console.info(`Appinfo1 Entries:\t${steam.appinfo.length}`)
     console.info(`Appinfo2 Entries:\t${steam.appinfo2.apps.length}`)
@@ -91,28 +90,47 @@ async function logData () {
       console.info(`Categorized Apps:\t${catData[ 1 ]}`)
       console.info(`Categories:\t\t${catData[ 0 ].length} (${catData[ 0 ].join(', ')})`)
     }
-    if (steam.packageinfo) {
-      console.info(`Packageinfo Entries:\t${steam.packageinfo.packages.length}`)
-      let filePath = path.join(cachePath, 'packageinfo.json')
-      if (!fs.existsSync(filePath)) {
-        await fs.writeFileAsync(filePath, JSON.stringify(steam.packageinfo, null, 2))
-      }
-    }
-    if (steam.appinfo) {
-      let filePath = path.join(cachePath, 'appinfo1.json')
-      if (fs.existsSync(filePath)) {
-        await fs.writeFileAsync(filePath, JSON.stringify(steam.appinfo, null, 2))
-      }
-    }
-    if (steam.appinfo2) {
-      let filePath = path.join(cachePath, 'appinfo2.json')
-      if (fs.existsSync(filePath)) {
-        await fs.writeFileAsync(filePath, JSON.stringify(steam.appinfo2.apps, null, 2))
-      }
-    }
+    console.info(`Packageinfo Entries:\t${steam.packageinfo.packages.length}`)
+
+    await saveCache()
   } catch (err) {
     console.error(err)
     process.exit(1)
+  }
+}
+
+async function saveCache () {
+  let filePath
+  let cachePath = path.join(__dirname, 'data')
+  if (!fs.existsSync(cachePath)) {
+    fs.mkdirSync(cachePath)
+  }
+  if (steam.packageinfo) {
+    filePath = path.join(cachePath, 'packageinfo.json')
+    if (fs.existsSync(cachePath)) {
+      await fs.writeFileAsync(filePath, JSON.stringify(steam.packageinfo, null, 2))
+    }
+    filePath = path.join(cachePath, 'appinfo1.json')
+    if (fs.existsSync(cachePath)) {
+      await fs.writeFileAsync(filePath, JSON.stringify(steam.appinfo, null, 2))
+    }
+  }
+  if (steam.appinfo2) {
+    filePath = path.join(cachePath, 'appinfo2.json')
+    if (fs.existsSync(cachePath)) {
+      await fs.writeFileAsync(filePath, JSON.stringify(steam.appinfo2.apps, null, 2))
+    }
+  }
+  if (steam.shortcuts2.shortcuts) {
+    filePath = path.join(cachePath, 'shortcuts2.json')
+    if (fs.existsSync(cachePath)) {
+      await fs.writeFileAsync(filePath, JSON.stringify(steam.shortcuts2.shortcuts, null, 2))
+    }
+
+    filePath = path.join(cachePath, 'shortcuts1.json')
+    if (fs.existsSync(cachePath)) {
+      await fs.writeFileAsync(filePath, JSON.stringify(steam.shortcuts.shortcuts, null, 2))
+    }
   }
 }
 

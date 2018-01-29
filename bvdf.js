@@ -70,7 +70,6 @@ exports.parseAppInfo = function (data) {
       })
     } catch (err) {
       if (err.message.indexOf('Illegal offset') !== -1 && err.message.indexOf(len) !== -1) {
-        console.error(`Parsed: ${data.length}`)
         break
       } else {
         console.error(`Parsed: ${data.length}`)
@@ -109,7 +108,23 @@ exports.parsePackageInfo = function (data) {
 }
 
 exports.parseShortcuts = function (data) {
-  return exports.decode(ByteBuffer.wrap(data, 'hex', true).resize(data.length))
+  let autoConvert = {
+    booleans: [
+      'IsHidden', 'AllowDesktopConfig', 'AllowOverlay', 'OpenVR'
+    ],
+    timestamps: [
+      'LastPlayTime'
+    ],
+    arrays: [
+      'tags'
+    ]
+  }
+
+  data = exports.decode(ByteBuffer.wrap(data, 'hex', true).resize(data.length))
+  data = convertData(Object.values(data.shortcuts), autoConvert)
+
+  return {shortcuts: data}
+// returnexports.decode(ByteBuffer.wrap(data, 'hex', true).resize(data.length)), autoConvert)
 }
 
 exports.decode = function decode (buffer) {
@@ -150,4 +165,36 @@ exports.decode = function decode (buffer) {
   } while (true)
 
   return object
+}
+
+function convertData (data, conversion) {
+  for (let bool of conversion.booleans) {
+    data.map(item => {
+      item[ bool ] = (item[ bool ] === 1 ? true : false) // eslint-disable-line no-unneeded-ternary
+
+      return item
+    })
+  }
+
+  for (let time of conversion.timestamps) {
+    data.map(item => {
+      if (item[ time ] === 0) {
+        item[ time ] = 'Never'
+        return item
+      } else {
+        item[ time ] = new Date(item[ time ] * 1000).toString()
+        return item
+      }
+    })
+  }
+
+  for (let list of conversion.arrays) {
+    data.map(item => {
+      item[ list ] = Object.values(item[ list ])
+
+      return item
+    })
+  }
+
+  return data
 }
