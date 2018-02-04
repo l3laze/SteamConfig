@@ -91,9 +91,10 @@ exports.parsePackageInfo = function (data) {
 
   while (true) {
     try {
-      let pid = buffer.readCString() // eslint-disable-line no-unused-vars
-      let hash = [buffer.readUint32(), buffer.readUint32(), buffer.readUint32(), buffer.readUint32(), buffer.readUint32()].toString(16)
-      data.push(exports.decode(buffer, hash))
+      let pid = buffer.readCString().toString() // eslint-disable-line no-unused-vars
+      let hash = [buffer.readUint32(), buffer.readUint32(), buffer.readUint32(), buffer.readUint32(), buffer.readUint32()].toString(16) // eslint-disable-line no-unused-vars
+      let tmp = exports.decode(buffer)
+      data.push(tmp)
     } catch (err) {
       if (err.message.indexOf('Index out of range') !== -1 && err.message.indexOf(len) !== -1) {
         break
@@ -136,6 +137,7 @@ exports.decode = function decode (buffer) {
     if (type === Type.End) {
       break
     }
+
     let name = buffer.readCString()
 
     switch (type) {

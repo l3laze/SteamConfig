@@ -78,11 +78,11 @@ async function logData () {
     console.info(`Library Folders:\t${steam.nondefaultLibraryfolders.length + 1}`)
     console.info(`Apps:\t\t\t${steam.steamapps.length + (steam.shortcuts !== null ? Object.keys(steam.shortcuts.shortcuts).length : 0)}`)
     console.info(`Steam apps:\t\t${steam.steamapps.length}`)
-    if (steam.shortcuts !== null) {
+    if (steam.shortcuts) {
       console.info(`Shortcuts1:\t\t${Object.keys(steam.shortcuts.shortcuts).length}`)
     }
-    if (steam.shortcuts2 !== null) {
-      console.info(`Shortcuts2:\t\t${steam.shortcuts2.length}`)
+    if (steam.shortcuts2) {
+      console.info(`Shortcuts2:\t\t${steam.shortcuts2.shortcuts.length}`)
     }
     console.info(`Appinfo1 Entries:\t${steam.appinfo.length}`)
     console.info(`Appinfo2 Entries:\t${steam.appinfo2.apps.length}`)
@@ -105,17 +105,24 @@ async function saveCache () {
   if (!fs.existsSync(cachePath)) {
     fs.mkdirSync(cachePath)
   }
+  if (steam.pinfoUnique) {
+    filePath = path.join(cachePath, 'pKeys.json')
+    if (fs.existsSync(cachePath)) {
+      await fs.writeFileAsync(filePath, JSON.stringify(steam.pinfoUnique, null, 2))
+    }
+  }
   if (steam.packageinfo) {
     filePath = path.join(cachePath, 'packageinfo.json')
     if (fs.existsSync(cachePath)) {
       await fs.writeFileAsync(filePath, JSON.stringify(steam.packageinfo, null, 2))
     }
+  }
+  if (steam.appinfo2) {
     filePath = path.join(cachePath, 'appinfo1.json')
     if (fs.existsSync(cachePath)) {
       await fs.writeFileAsync(filePath, JSON.stringify(steam.appinfo, null, 2))
     }
-  }
-  if (steam.appinfo2) {
+
     filePath = path.join(cachePath, 'appinfo2.json')
     if (fs.existsSync(cachePath)) {
       await fs.writeFileAsync(filePath, JSON.stringify(steam.appinfo2.apps, null, 2))
@@ -130,6 +137,12 @@ async function saveCache () {
     filePath = path.join(cachePath, 'shortcuts1.json')
     if (fs.existsSync(cachePath)) {
       await fs.writeFileAsync(filePath, JSON.stringify(steam.shortcuts.shortcuts, null, 2))
+    }
+  }
+  if (steam.sharedconfig) {
+    filePath = path.join(cachePath, 'sharedconfig.json')
+    if (fs.existsSync(cachePath)) {
+      await fs.writeFileAsync(filePath, JSON.stringify(steam.sharedconfig, null, 2))
     }
   }
 }

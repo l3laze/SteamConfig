@@ -324,6 +324,19 @@ SteamConfig.prototype.loadPackageinfo = async function loadPackageinfo () {
   pinfo.universe = buf.readUInt32LE(off += 1)
   pinfo.packages = BVDF2.parsePackageInfo(buf.slice(off))
 
+  let uniqueKeys = {}
+
+  pinfo.packages.map(p => {
+    Object.keys(p).map(k => {
+      uniqueKeys[ k ] = true
+
+      return k
+    })
+
+    return p
+  })
+
+  this.pinfoUnique = uniqueKeys
   this.packageinfo = pinfo
 }
 
