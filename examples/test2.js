@@ -24,13 +24,13 @@ async function run () {
     /*
      *
      */
-    await steamcon.load(steamcon.paths.skins)
-    await steamcon.load(steamcon.paths.registry)
-    await steamcon.load(steamcon.paths.loginusers)
-    await steamcon.load(steamcon.paths.libraryfolders)
-    await steamcon.load(steamcon.paths.steamapps)
-    await steamcon.load(steamcon.paths.extraLibrariesSteamApps)
-    await steamcon.requestPopularTags()
+    await steamcon.load(steamcon.getPath('skins'))
+    await steamcon.load(steamcon.getPath('registry'))
+    await steamcon.load(steamcon.getPath('loginusers'))
+    await steamcon.load(steamcon.getPath('libraryfolders'))
+    await steamcon.load(steamcon.getPath('steamapps'))
+    await steamcon.load(steamcon.getPath('extraSteamApps'))
+    await steamcon.requestTags()
 
     /*
      * Get the current user, or attempt to get the only user if none
@@ -60,9 +60,9 @@ async function run () {
      * Load some data using the SteamConfig.paths getters/setters to get
      *  platform-and-installtion-specific paths to the data.
      */
-    await steamcon.load(steamcon.paths.sharedconfig)
-    await steamcon.load(steamcon.paths.appinfo)
-    await steamcon.load(steamcon.paths.shortcuts)
+    await steamcon.load(steamcon.getPath('sharedconfig'))
+    await steamcon.load(steamcon.getPath('appinfo'))
+    await steamcon.load(steamcon.getPath('shortcuts'))
     await steamcon.requestOwnedApps()
 
     /*

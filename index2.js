@@ -1,6 +1,5 @@
 /**
- * @file index2.js
- * @author Tom <l3l_aze@yahoo.com>
+ * @author Tom <l3l&#95;aze&#64;yahoo&#46;com>
  */
 
 'use strict'
@@ -19,76 +18,20 @@ const {Registry} = require('rage-edit')
 /**
  * SteamConfig constructor. If running on Windows, will initialize an instance of the chunk of the registry that is needed.
  * @constructor
+ * @throws {Error} - If there's an error creating the registry instance on Windows.
  */
 function SteamConfig () {
   if (OS.platform() === 'win32') {
     try {
       internal[ 'winreg' ] = new Registry('HKCU\\Software\\Valve\\Steam')
     } catch (err) {
-      throw new Error()
+      throw new Error(err)
     }
-  }
-}
-
-/**
- * The paths to the Steam data that SteamConfig can manage.
- * @constant
- */
-const steamPaths = {
-  get appinfo () {
-    return path.join(internal.rootPath, 'appcache', 'appinfo.vdf')
-  },
-  get config () {
-    return path.join(internal.rootPath, 'config', 'config.vdf')
-  },
-  get libraryfolders () {
-    return path.join(internal.rootPath, 'steamapps', 'libraryfolders.vdf')
-  },
-  get localconfig () {
-    return path.join(internal.rootPath, 'userdata', `${internal.user.accountId}`, 'config', 'localconfig.vdf')
-  },
-  get loginusers () {
-    return path.join(internal.rootPath, 'config', 'loginusers.vdf')
-  },
-  get registry () {
-    if (internal.os === 'linux' || internal.os === 'darwin') {
-      return path.join(internal.rootPath, 'registry.vdf')
-    } else {
-      return 'winreg'
-    }
-  },
-  get sharedconfig () {
-    return path.join(internal.rootPath, 'userdata', `${internal.user.accountId}`, '7', 'remote', 'sharedconfig.vdf')
-  },
-  get shortcuts () {
-    return path.join(internal.rootPath, 'userdata', `${internal.user.accountId}`, 'config', 'shortcuts.vdf')
-  },
-  get skins () {
-    switch (internal.os) {
-      case 'darwin':
-        return path.join(internal.rootPath, 'Steam.AppBundle', 'Steam', 'Contents', 'MacOS', 'skins')
-
-      case 'linux':
-      case 'win32':
-        return path.join(internal.rootPath, 'skins')
-    }
-  },
-  get steamapps () {
-    return path.join(internal.rootPath, 'steamapps')
-  },
-  get extraLibraries () {
-    return internal.extraLibraries
-  },
-  get extraLibrariesSteamApps () {
-    let appPaths = Array.from(internal.extraLibraries.map(l => path.join(l, 'steamapps')))
-
-    return appPaths
   }
 }
 
 /*
- * Internal values for SteamConfig. The getters/setters of
- *  SteamConfig.prototype are a proxy to access/modify them.
+ * Internal values for SteamConfig. The getters/setters of SteamConfig.prototype are a proxy to access/modify them.
  */
 let internal = {
   arch: OS.arch(),
@@ -116,123 +59,313 @@ let internal = {
   user: null
 }
 
-/**
- * Internal property getters and setters.
- */
 SteamConfig.prototype = {
-  get paths () {
-    return steamPaths
-  },
-
-  set paths (val) {
-    // Just ignore it. User(s) should not be able to modify paths.
-  },
-
+  /**
+   * Get the path to the root of the Steam installation.
+   * @method
+   * @access public
+   * @returns {String} - The path to the root of the Steam folder.
+   */
   get root () {
     return internal.rootPath
   },
 
+  /**
+   * Set the path to the root of the Steam installation.
+   * @method
+   * @access public
+   * @param {String} - The path to the root of the Steam folder.
+   */
   set root (val) {
     internal.rootPath = val
   },
 
+  /**
+   * Get the current machine's architecture (ia32 = 32-bit or ia64 = 64-bit).
+   * @method
+   * @access public
+   * @returns {String} - ia32 (32-bit) or ia64 (64-bit).
+   */
   get arch () {
     return internal.arch
   },
 
+  /**
+   * Get the current machine's platform (OS).
+   * @method
+   * @access public
+   * @returns {String} - The name of the platform (linux, darwin = mac, win32 = windows)
+   */
   get os () {
     return internal.os
   },
 
+  /**
+   * Get the user's home directory.
+   * @method
+   * @access public
+   * @returns {String} - The path to the user's home directory.
+   */
   get home () {
     return internal.home
   },
 
+  /**
+   * Get the currently-set SteamConfig user.
+   * @method
+   * @access public
+   * @returns {Object} - The current user.
+   */
   get user () {
     return internal.user
   },
 
+  /**
+   * Set the user for SteamConfig.
+   * @method
+   * @access public
+   * @param {Object} - The user to set.
+   */
   set user (val) {
     internal.user = val
   },
 
+  /**
+   * Get current state of the cache -- enabled or disabled.
+   * @method
+   * @access public
+   * @returns {Boolean} - True if the cache is enabled, otherwise false.
+   */
   get cacheEnabled () {
     return internal.cache.enabled
   },
 
+  /**
+   * Set the state of the cache.
+   * @method
+   * @access public
+   * @param {Boolean} - True to enable the cache, false to disable it.
+   */
   set cacheEnabled (val) {
     internal.cache.enabled = val
   },
 
+  /**
+   * Get the path to the cache.
+   * @method
+   * @access public
+   * @returns {String} - The path to the cache.
+   */
   get cachePath () {
     return internal.cache.folder
   },
 
+  /**
+   * Set the path to the cache.
+   * @method
+   * @access public
+   * @param {String} - The new path to the cache.
+   */
   set cachePath (val) {
     internal.cache.folder = val
   },
 
+  /**
+   * Get the current state of "appendApps" -- enabled or disabled.
+   *  This will cause `this.load(this.steamapps | this.extraSteamApps)` to append rather than create a new list, allowing loading of all of the steamapps folders at once.
+   * @method
+   * @access public
+   * @returns {Boolean}
+   */
   get appendApps () {
     return internal.appendApps
   },
 
+  /**
+   * Set the state of "appendApps" -- enabled or disabled.
+   * @method
+   * @access public
+   * @param {Boolean} - True to enable appending of loaded apps, false to disable.
+   */
   set appendApps (val) {
     internal.appendApps = val
   },
 
+  /**
+   * Get the path to the file Steam/appcache/appinfo.vdf.
+   * @method
+   * @access public
+   * @returns {String} - The path to the file.
+   */
   get appinfo () {
     return internal.appinfo
   },
 
+  /**
+   * Get the path to the file Steam/config/config.vdf
+   * @method
+   * @access public
+   * @returns {String} - The path to the file.
+   */
   get config () {
     return internal.config
   },
 
+  /**
+   * Get the path to the file Steam/steamapps/libraryfolders.vdf
+   * @method
+   * @access public
+   * @returns {String} - The path to the file.
+   */
   get libraryfolders () {
     return internal.libraryfolders
   },
 
+  /**
+   * Get the path(s) to any non-default Steam Library Folders.
+   * @method
+   * @access public
+   * @returns {String} - The path(s) to the folders.
+   */
   get extraLibraries () {
     return internal.extraLibraries
   },
 
+  /**
+   * Get the path(s) to the file Steam/userdata/{user.accountId}/config/localconfig.vdf.
+   * @method
+   * @access public
+   * @returns {String} - The path to the file.
+   */
   get localconfig () {
     return internal.localconfig
   },
 
+  /**
+   * Get the path to the file Steam/config/loginusers.vdf
+   * @method
+   * @access public
+   * @returns {String} - The path to the file.
+   */
   get loginusers () {
     return internal.loginusers
   },
 
+  /**
+   * Get the path to the file Steam/appcache/packageinfo.vdf
+   * @method
+   * @access public
+   * @returns {String} - The path to the file.
+   */
   get packageinfo () {
     return internal.packageinfo
   },
 
+  /**
+   * Get the platform-specific path to the registry.
+   * @method
+   * @access public
+   * @returns {String} - Windows: "winreg". Linux & Mac: The path to the file.
+   */
   get registry () {
     return internal.registry
   },
 
+  /**
+   * Get the path to the file Steam/userdata/{accountId}/config/shortcuts.vdf.
+   * @method
+   * @access public
+   * @returns {String} - The path to the file.
+   */
   get shortcuts () {
     return internal.shortcuts
   },
 
+  /**
+   * Get the path to the file Steam/userdata/{accountId}/7/remote/sharedconfig.vdf.
+   * @method
+   * @access public
+   * @returns {String} - The path to the file.
+   */
   get sharedconfig () {
     return internal.sharedconfig
   },
 
+  /**
+   * Get the platform-specific path to the "skins" folder.
+   * @method
+   * @access public
+   * @return {String} - The path to the folder.
+   */
   get skins () {
     return internal.skins
   },
 
+  /**
+   * Get the path to the default Steam/steamapps Steam Library folder.
+   * @method
+   * @access public
+   * @returns {String} - The path to the folder.
+   */
   get steamapps () {
     return internal.steamapps
   }
 }
 
 /**
- * Load a file based on it's path from SteamConfig.paths.
+ * Get the paths to files specific to a platform/installation/user.
  * @method
- * @arg which -- The path, from SteamConfig.paths, to load the file from.
+ * @param which {string} - A Steam config file by name to get the path to.
+ */
+SteamConfig.prototype.getPath = function getPath (which) { // eslint-disable-line no-unused-vars
+  switch (which) {
+    case 'appinfo':
+      return path.join(internal.rootPath, 'appcache', 'appinfo.vdf')
+    case 'config':
+      return path.join(internal.rootPath, 'config', 'config.vdf')
+    case 'libraryfolders':
+      return path.join(internal.rootPath, 'steamapps', 'libraryfolders.vdf')
+    case 'localconfig':
+      return path.join(internal.rootPath, 'userdata', `${internal.user.accountId}`, 'config', 'localconfig.vdf')
+    case 'loginusers':
+      return path.join(internal.rootPath, 'config', 'loginusers.vdf')
+    case 'registry':
+      if (internal.os === 'linux' || internal.os === 'darwin') {
+        return path.join(internal.rootPath, 'registry.vdf')
+      } else {
+        return 'winreg'
+      }
+    case 'sharedconfig':
+      return path.join(internal.rootPath, 'userdata', `${internal.user.accountId}`, '7', 'remote', 'sharedconfig.vdf')
+    case 'shortcuts':
+      return path.join(internal.rootPath, 'userdata', `${internal.user.accountId}`, 'config', 'shortcuts.vdf')
+    case 'skins':
+      switch (internal.os) {
+        case 'darwin':
+          return path.join(internal.rootPath, 'Steam.AppBundle', 'Steam', 'Contents', 'MacOS', 'skins')
+
+        case 'linux':
+        case 'win32':
+          return path.join(internal.rootPath, 'skins')
+        default:
+          throw new Error(`The platform ${internal.os} is not currently supported.`)
+      }
+    case 'steamapps':
+      return path.join(internal.rootPath, 'steamapps')
+    case 'extraLibraries':
+      return internal.extraLibraries
+    case 'extraSteamApps':
+      return Array.from(internal.extraLibraries.map(l => path.join(l, 'steamapps')))
+    default:
+      throw new Error(`Cannot find unknown path ${which}.`)
+  }
+}
+
+/**
+ * Load a file based on it's path from {@link steamConfig.getPath(which)}.
+ * @method
+ * @async
+ * @param which {string} - The path to the file.
  */
 SteamConfig.prototype.load = async function load (which) {
   if (which && ((typeof which === 'string' && which.indexOf('steamapps') !== -1 && which.indexOf('libraryfolders.vdf') === -1) ||
@@ -285,7 +418,7 @@ SteamConfig.prototype.load = async function load (which) {
       } else if (which.indexOf('loginusers.vdf') !== -1) {
         internal.loginusers = await loadTextVDF(which)
       } else if (which.indexOf('registry') !== -1) {
-        internal.registry = await loadRegistry(this.paths.registry)
+        internal.registry = await loadRegistry()
       } else if (which.indexOf('shortcuts.vdf') !== -1) {
         internal.shortcuts = await loadBinaryVDF(which)
       } else if (which.indexOf('skins') !== -1) {
@@ -299,7 +432,7 @@ SteamConfig.prototype.load = async function load (which) {
         })
         internal.skins = skins
       } else {
-        throw new Error(`Unknown file: ${which}. Cannot load.`)
+        throw new Error(`Cannot load unknown file ${which}.`)
       }
     } catch (err) {
       throw new Error(err)
@@ -308,10 +441,11 @@ SteamConfig.prototype.load = async function load (which) {
 }
 
 /**
- * Save a file based on it's path from SteamConfig.paths.
+ * Save a file based on it's path from {@link steamConfig.getPath(which)}
  * @method
+ * @async
  */
-SteamConfig.prototype.save = function save () {
+SteamConfig.prototype.save = async function save () {
 
 }
 
@@ -355,7 +489,7 @@ SteamConfig.prototype.detectRoot = function detectRoot () {
 }
 
 /**
- * Attempt to detect the current user based on Registry.HKCU.Software.Valve.Steam.AutoLoginUser.
+ * Attempt to detect the current user based on `Registry.HKCU.Software.Valve.Steam.AutoLoginUser`.
  * @method
  */
 SteamConfig.prototype.detectUser = function detectUser () {
@@ -365,12 +499,14 @@ SteamConfig.prototype.detectUser = function detectUser () {
     return user
   }
 
-  return user
+  return null
 }
 
 /**
  * Request a user's list of owned apps from the internet.
  * @method
+ * @async
+ * @param force {boolean} - Force request to get a new copy instead of using a cached copy.
  */
 SteamConfig.prototype.requestOwnedApps = async function requestOwnedApps (force) {
   let data
@@ -409,8 +545,10 @@ SteamConfig.prototype.requestOwnedApps = async function requestOwnedApps (force)
 /**
  * Request a list of the popular tags from the internet.
  * @method
+ * @async
+ * @param force {boolean} - Force request to get a new copy instead of using a cached copy.
  */
-SteamConfig.prototype.requestPopularTags = async function requestPopularTags (force) {
+SteamConfig.prototype.requestTags = async function requestTags (force) {
   let data
   let cacheFile = path.join(this.cachePath, `tags.json`)
 
@@ -447,6 +585,7 @@ SteamConfig.prototype.requestPopularTags = async function requestPopularTags (fo
 /**
  * Get the name of a tag from the list of tags using it's id.
  * @method
+ * @param id {string|number} - The tag id to get the name of.
  */
 SteamConfig.prototype.getTagById = function getTagById (id) {
   if (!id || typeof id !== 'string') {
@@ -472,6 +611,8 @@ SteamConfig.prototype.getTagById = function getTagById (id) {
 /**
  * Add a category to a given app entry if it does not exist.
  * @method
+ * @param app {object} - The app to add the category to.
+ * @param cat {string} - The category to add.
  */
 SteamConfig.prototype.addCategory = function addCategory (app, cat) {
   let cats = Object.values(app.tags)
@@ -487,6 +628,8 @@ SteamConfig.prototype.addCategory = function addCategory (app, cat) {
 /**
  * Remove a category from a given app entry if it does exist.
  * @method
+ * @param app {object} - The app to remove the category from.
+ * @param cat {string} - The category to remove.
  */
 SteamConfig.prototype.removeCategory = function removeCategory (app, cat) {
   let tags = Object.values(app.tags)
@@ -507,6 +650,7 @@ SteamConfig.prototype.removeCategory = function removeCategory (app, cat) {
 /**
  * Get the accountId portion of a user's 64-bit account number from loginusers.vdf.
  * @method
+ * @param id64 {string|number} - The user's 64-bit Steam ID.
  */
 SteamConfig.prototype.getAccountId = function getAccountId (id64) {
   let data
@@ -614,7 +758,7 @@ async function loadRegistry () {
 /*
  * Internal method to save the registry entries either to registry.vdf on Linux/Mac, or the Registry on Windows.
  */
-async function saveRegistry () {
+async function saveRegistry () { // eslint-disable-line no-unused-vars
 }
 
 /*
@@ -647,13 +791,6 @@ function getAccountIdFromId64 (id64) {
   } catch (err) {
     throw new Error(err)
   }
-}
-
-/*
- * To keep es-lint from whining about it not being used.
- */
-if (false) { // eslint-disable-line no-constant-condition
-  saveRegistry()
 }
 
 module.exports = SteamConfig

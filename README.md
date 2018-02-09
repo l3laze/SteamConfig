@@ -51,7 +51,7 @@ let steam = new SteamConfig()
 ```
 
 
-See [API](https://github.com/l3laze/SteamConfig/blob/master/API.md) for more information.
+See [API](./../API.md) or [the documentation](./index.html) for more information.
 
 
 ----

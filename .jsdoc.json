@@ -1,0 +1,29 @@
+{
+    "plugins": [
+      "plugins/markdown"
+    ],
+    "source": {
+        "include": [
+          "./steamconfig.js",
+          "./steampaths.js"
+        ]
+    },
+    "sourceType": "module",
+    "tags": {
+        "allowUnknownTags": true,
+        "dictionaries": ["jsdoc", "closure"]
+    },
+    "templates": {
+        "monospaceLinks": true,
+        "default": {
+          "includeDate": false
+        }
+    },
+    "opts": {
+      "destination": "./docs",
+      "encoding": "utf8",
+      "recurse": false,
+      "sort": false,
+      "access": "all"
+    }
+}
