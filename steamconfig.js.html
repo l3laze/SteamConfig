@@ -60,9 +60,8 @@ const FXP = require('fast-xml-parser')
 const WebRequest = require('web-request')
 const UInt64 = require('cuint').UINT64
 const TVDF = require('simple-vdf2')
-const BVDF = require('./bvdf.js')
 const {Registry} = require('rage-edit')
-// const SteamPaths = require('./steampaths.js')
+const BVDF = require('./../bvdf.js')
 
 /**
  * @class
@@ -127,11 +126,12 @@ function SteamConfig () {
  *  The internal function [afterLoad](global.html#afterLoad) is run on each file after it's been loaded to automatically
  *    handle loading some data such as the locations of non-default Steam Library Folders in the file `libraryfolers.vdf`.
  * @method
+ * @async
  * @param {String|Array} names - A string for a single file/path, or an array for a collection of files/paths or the special 'library' entries for non-default Steam Library Folders which will be an entry like `['library', {path}]`.
  * @throws {Error} - If names is an invalid arg (non-String &amp; non-Array), or any of the entries are not a valid file/path as per [SteamPaths](global.html#SteamPaths).
  * @see [SteamPaths](global.html#SteamPaths), [prepareFileNames](#~prepareFileNames)
  */
-SteamConfig.prototype.load = async function (names) {
+SteamConfig.prototype.load = async function load (names) {
   if (!names || ((typeof names !== 'string' || names === '') &amp;&amp; (typeof names !== 'object' || names.constructor !== Array))) {
     throw new Error(`Invalid arg for load: Value ${names} with type ${typeof names}.`)
   }
@@ -455,6 +455,7 @@ SteamConfig.prototype.logData = function logData () {
  * Internal method to load app data from a library folder.
  * @name loadApps
  * @function
+ * @async
  * @param {Path} library - The path to the library to load the appmanifest_\###.acf files from.
  * @return {Array} - The app data as an Array of Objects.
  * @throws {Error} - If there is an error loading the app data.
@@ -487,6 +488,7 @@ async function loadApps (library) {
  * Internal method to load skin names.
  * @name loadSkins
  * @function
+ * @async
  * @param {Path} folder - The folder to get the skin names from.
  * @return {Array} - The names of the skins as an Array of Strings.
  * @throws {Error} - If there is an error loading the skin data.
