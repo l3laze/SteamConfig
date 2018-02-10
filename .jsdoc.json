@@ -4,8 +4,7 @@
     ],
     "source": {
         "include": [
-          "./steamconfig.js",
-          "./steampaths.js"
+          "./src/steamconfig.js"
         ]
     },
     "sourceType": "module",

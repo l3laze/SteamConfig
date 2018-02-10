@@ -1,6 +1,6 @@
 /**
  * @author Tom <l3l&#95;aze&#64;yahoo&#46;com>
- * @module SteamConfig
+ *
  * @requires {@link https://www.npmjs.com/package/cuint|cuint}
  * @requires {@link https://www.npmjs.com/package/bluebird|bluebird}
  * @requires {@link https://www.npmjs.com/package/rage-edit|rage-edit}
@@ -19,31 +19,32 @@ const FXP = require('fast-xml-parser')
 const WebRequest = require('web-request')
 const UInt64 = require('cuint').UINT64
 const TVDF = require('simple-vdf2')
-const BVDF = require('./bvdf.js')
 const {Registry} = require('rage-edit')
-const SteamPaths = require('./steampaths.js')
+const BVDF = require('./../bvdf.js')
 
 /**
- * @constructor
- * @export
- * @property {Path}             rootPath        - The root of the Steam installation.
- * @property {Object}           user            - Current user.
- * @property {Array}            libraries       - A Path-type entry for each of the non-default Steam Library Folders of the Steam installation.
- * @property {Boolean}          appendToApps    - Whether to append apps or destroy the old data each time a single steamapps folder is loaded.
- * @property {Boolean}          cacheEnabled    - The current cache setting. Enabled = true, disabled = false.
- * @property {Path}             cacheFolder     - Path to use for the cache folder.
+ * @class
+ * @name SteamConfig
  *
- * @property {Object}           appinfo         - Steam/appcache/appinfo.vdf.
- * @property {Object}           config          - Steam/config/config.vdf.
- * @property {Object}           libraryfolders  - Steam/steamapps/libraryfolders.vdf.
- * @property {Object}           localconfig     - Steam/userdata/{user.accountId}.localconfig.vdf as an object.
- * @property {Object}           loginusers      - Steam/config/loginusers.vdf as an object.
- * @property {Object}           packageinfo     - Steam/appcache/packageinfo.vdf as an object.
- * @property {Object}           registry        - Platform-specific: On Linux/Mac: registry.vdf as an object. On Windows: Registry as an object.
- * @property {Object}           shortcuts       - Steam/userdata/{this.user.accountId}/config/shortcuts.vdf as an object.
- * @property {Object}           sharedconfig    - Steam/userdata/{this.user.accountId}/7/remote/sharedconfig.vdf as an object.
- * @property {Array}            skins           - Platform-specific skins folder entries (that are skins) as an array.
- * @property {Array}            steamapps       - The appmanifest files of Steam/steamapps as an array.
+ * @property {Path} rootPath - The root of the Steam installation.
+ * @property {Object} user - Current user.
+ * @property {Array} libraries - A Path-type entry for each of the non-default Steam Library Folders of the Steam installation.
+ * @property {Boolean} appendToApps - Whether to append apps or destroy the old data each time a single steamapps folder is loaded.
+ * @property {Boolean} cacheEnabled - The current cache setting. Enabled = true, disabled = false.
+ * @property {Path} cacheFolder - Path to use for the cache folder.
+ *
+ * @property {Object} appinfo - Steam/appcache/appinfo.vdf.
+ * @property {Object} config - Steam/config/config.vdf.
+ * @property {Object} libraryfolders - Steam/steamapps/libraryfolders.vdf.
+ * @property {Object} localconfig - Steam/userdata/{user.accountId}.localconfig.vdf as an object.
+ * @property {Object} loginusers - Steam/config/loginusers.vdf as an object.
+ * @property {Object} packageinfo - Steam/appcache/packageinfo.vdf as an object.
+ * @property {Object} registry - Platform-specific: On Linux/Mac: registry.vdf as an object. On Windows: Registry as an object.
+ * @property {Object} shortcuts - Steam/userdata/{this.user.accountId}/config/shortcuts.vdf as an object.
+ * @property {Object} sharedconfig - Steam/userdata/{this.user.accountId}/7/remote/sharedconfig.vdf as an object.
+ * @property {Array} skins - Platform-specific skins folder entries (that are skins) as an array.
+ * @property {Array} steamapps - The appmanifest files of Steam/steamapps as an array.
+ * @throws {Error} - If there is an error creating an instance of the Windows Registry, when running on Windows.
  */
 function SteamConfig () {
   this.rootPath = null
@@ -79,10 +80,17 @@ function SteamConfig () {
 }
 
 /**
- * Load a Steam file by name.
+ * Load a Steam file/path by name, including storing the data in it's place on this instance of SteamConfig.
+ *  Pre-processes arguments using the internal function [prepareFileNames](global.html#prepareFileNames) to ensure proper load order.
+ *  The internal function [afterLoad](global.html#afterLoad) is run on each file after it's been loaded to automatically
+ *    handle loading some data such as the locations of non-default Steam Library Folders in the file `libraryfolers.vdf`.
  * @method
+ * @async
+ * @param {String|Array} names - A string for a single file/path, or an array for a collection of files/paths or the special 'library' entries for non-default Steam Library Folders which will be an entry like `['library', {path}]`.
+ * @throws {Error} - If names is an invalid arg (non-String & non-Array), or any of the entries are not a valid file/path as per [SteamPaths](global.html#SteamPaths).
+ * @see [SteamPaths](global.html#SteamPaths), [prepareFileNames](#~prepareFileNames)
  */
-SteamConfig.prototype.load = async function (names) {
+SteamConfig.prototype.load = async function load (names) {
   if (!names || ((typeof names !== 'string' || names === '') && (typeof names !== 'object' || names.constructor !== Array))) {
     throw new Error(`Invalid arg for load: Value ${names} with type ${typeof names}.`)
   }
@@ -139,10 +147,13 @@ SteamConfig.prototype.load = async function (names) {
           break
 
         case 'library':
-          if (this.appendToApps && this.steamapps) {
-            this.steamapps.concat(await loadApps(file))
+          let apps
+          if (this.appendToApps === true && this.steamapps !== null) {
+            apps = await loadApps(file)
+            this.steamapps = this.steamapps.concat(apps)
           } else {
-            this.steamapps = await loadApps(file)
+            apps = await loadApps(file)
+            this.steamapps = apps
           }
           break
 
@@ -163,6 +174,8 @@ SteamConfig.prototype.load = async function (names) {
 /**
  * Attempt to detect the root installation path based on platform-specific default installation locations.
  * @method
+ * @throws {Error} - If the current OS is not supported.
+ * @returns {Path} - The detected path, or null if the default path is not found.
  */
 SteamConfig.prototype.detectRoot = function detectRoot () {
   let detected
@@ -193,7 +206,7 @@ SteamConfig.prototype.detectRoot = function detectRoot () {
   }
 
   if (detected && !fs.existsSync(detected)) {
-    throw new Error('The default path does not exist.')
+    detected = null
   }
 
   return detected
@@ -202,6 +215,8 @@ SteamConfig.prototype.detectRoot = function detectRoot () {
 /**
  * Attempt to detect the current user based on `Registry.HKCU.Software.Valve.Steam.AutoLoginUser`.
  * @method
+ * @returns {Object} - The detected user, or null if none is found.
+ * @throws {Error} - If loginusers or the registry have not been loaded yet.
  */
 SteamConfig.prototype.detectUser = function detectUser () {
   let user = null
@@ -238,19 +253,19 @@ SteamConfig.prototype.detectUser = function detectUser () {
     user = null
   }
 
-  console.info(`Detected user: ${user}`)
-
   return user
 }
 
 /**
  * Get the path to a named Steam file.
  * @method
- * @returns {Path} - The path to the file.
+ * @param {String} name - The name of a known Steam configuration file/path, as per [SteamPaths](global.html#SteamPaths)
+ * @returns {Path} - The path to the file., or null
+ * @throws {Error} - If the path is not known, or if name is an invalid argument.
  */
 SteamConfig.prototype.getPath = function getPath (name) {
   if (!name || name === '' || typeof name !== 'string') {
-    return null
+    throw new Error(`Cannot get ${name} with type ${typeof name}. This should be type 'string', and one of the values from SteamPaths.`)
   }
 
   switch (name) {
@@ -290,14 +305,17 @@ SteamConfig.prototype.getPath = function getPath (name) {
       }
     case 'steamapps':
       return path.join(this.rootPath, 'steamapps')
+    default:
+      throw new Error(`Cannot find unknown path ${name}.`)
   }
 }
 
 /**
- * Request a user's list of owned apps from the internet.
+ * Request the current user's list of owned apps from the internet.
  * @method
  * @async
- * @param force {boolean} - Force request to get a new copy instead of using a cached copy.
+ * @param {Boolean} force - Force to get a new copy instead of loading cached copy.
+ * @throws {Error} - If the user has not been defined yet, or there is an error reading from or writing to the cache, or there is an error loading the file from the internet, or there is an error parsing the data (XML) and converting it to JSON.
  */
 SteamConfig.prototype.requestOwnedApps = async function requestOwnedApps (force = false) {
   let data
@@ -337,7 +355,9 @@ SteamConfig.prototype.requestOwnedApps = async function requestOwnedApps (force 
  * Request a list of the popular tags from the internet.
  * @method
  * @async
- * @param force {boolean} - Force request to get a new copy instead of using a cached copy.
+ * @param {Boolean} force - Force request to get a new copy instead of using a cached copy.
+ * @returns {Array} - An Array of Strings that represents the popular tags on Steam.
+ * @throws {Error} - If there is an error loading the tags list from the local cache or the internet.
  */
 SteamConfig.prototype.requestTags = async function requestTags (force = false) {
   let data
@@ -390,6 +410,15 @@ SteamConfig.prototype.logData = function logData () {
   }
 }
 
+/**
+ * Internal method to load app data from a library folder.
+ * @name loadApps
+ * @function
+ * @async
+ * @param {Path} library - The path to the library to load the appmanifest_\###.acf files from.
+ * @return {Array} - The app data as an Array of Objects.
+ * @throws {Error} - If there is an error loading the app data.
+ */
 async function loadApps (library) {
   let apps
 
@@ -402,7 +431,7 @@ async function loadApps (library) {
       }
     })
 
-    apps = Promise.all(apps.map(async function loadAppData(item) {
+    apps = await Promise.all(apps.map(async function loadAppData(item) {
       item = '' + await fs.readFileAsync(path.join(library, item))
       item = TVDF.parse(item)
       return item
@@ -414,6 +443,15 @@ async function loadApps (library) {
   }
 }
 
+/**
+ * Internal method to load skin names.
+ * @name loadSkins
+ * @function
+ * @async
+ * @param {Path} folder - The folder to get the skin names from.
+ * @return {Array} - The names of the skins as an Array of Strings.
+ * @throws {Error} - If there is an error loading the skin data.
+ */
 async function loadSkins (folder) {
   let skins
 
@@ -430,6 +468,13 @@ async function loadSkins (folder) {
   }
 }
 
+/**
+ * Internal function to properly organize names array so that user-specific data is loaded last.
+ * @name prepareFileNames
+ * @function
+ * @param {Array} names - The Array of String|Array entries that [load](module-SteamConfig-SteamConfig.html#load) was called with.
+ * @return {Array} - The names Array, after organization.
+ */
 function prepareFileNames (names) {
   if (typeof names === 'string') {
     if (names === 'all') {
@@ -458,14 +503,30 @@ function prepareFileNames (names) {
   return first.concat(last)
 }
 
+/**
+ * Internal function to get a user's account ID from their SteamID 64.
+ * @name getAccountIdFromId64
+ * @function
+ * @param {String} id64 - The SteamID64 of the user to calculte the Steam3:accountId of.
+ * @return {String} - The accountId of the user.
+ * @throws {Error} - If cuint.UInt64 has an issue with the data.
+ */
 function getAccountIdFromId64 (id64) {
   try {
-    return (new UInt64(id64, 10).toNumber() & 0xFFFFFFFF) >>> 0
+    return '' + (new UInt64(id64, 10).toNumber() & 0xFFFFFFFF) >>> 0
   } catch (err) {
     throw new Error(err)
   }
 }
 
+/**
+ * Internal function to do some special handling after loading specific files.
+ * So far it only handles "libraryfolders" by setting sc.libraries to the list of entries.
+ * @name afterLoad
+ * @function
+ * @param {SteamConfig} sc - An instance of SteamConfig.
+ * @param {String} name - The name of the file that was loaded without the extension (as from [SteamPaths](module-SteamPaths.html).
+ */
 function afterLoad (sc, name) {
   switch(name) {
     case 'libraryfolders':
@@ -476,7 +537,43 @@ function afterLoad (sc, name) {
       }).map(function mapLibs (item) {
         return sc.libraryfolders.LibraryFolders[ item ]
       })
+      break
+
+    default:
+      break
   }
+}
+
+/**
+ * A set of strings representing the Steam configuration files SteamConfig can handle.
+ * @constant
+ * @property {String} all - All of the files. Handled specially by [load](SteamConfig#load)
+ * @property {String} appinfo - appinfo => /appcache/appinfo.vdf
+ * @property {String} config - config => /config/config.vdf
+ * @property {String} libraryfolders - libraryfolders => /steamapps/libraryfolders.vdf
+ * @property {String} localconfig - localconfig => /userdata/{accountId}/config/localconfig.vdf
+ * @property {String} packageinfo - packageinfo => /appcache/packageinfo.vdf
+ * @property {String} registry - registry => ../registry.vdf on Linux, /registry.vdf on Mac or winreg on Windows.
+ * @property {String} shortcuts - shortcuts => /userdata/{accountId}/config/shortcuts.vdf
+ * @property {String} sharedconfig - sharedconfig => userdata/{accountId}/7/remote/sharedconfig.vdf
+ * @property {String} skins - skins => skins/ on Linux or Winows, /Steam.AppBundle/Steam/Contents/MacOS/skins on Mac.
+ * @property {String} steamapps - steamapps => /steamapps/
+ * @property {String} library - library => {aSteamLibraryFolder}/steamapps/
+ */
+const SteamPaths = {
+  all: 'all',
+
+  appinfo: 'appinfo',
+  config: 'config',
+  libraryfolders: 'libraryfolders',
+  localconfig: 'localconfig',
+  loginusers: 'loginusers',
+  packageinfo: 'packageinfo',
+  registry: 'registry',
+  shortcuts: 'shortcuts',
+  sharedconfig: 'sharedconfig',
+  skins: 'skins',
+  steamapps: 'steamapps'
 }
 
 module.exports = {

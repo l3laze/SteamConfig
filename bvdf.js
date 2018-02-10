@@ -1,5 +1,23 @@
-const ByteBuffer = require('bytebuffer')
+/**
+ * @author Tom <l3l&#95;aze&#64;yahoo&#46;com>
+ * @module bvdf
+ * Based on [seishun's node-steam/lib/VDF.js](https://github.com/seishun/node-steam).
+ * @requires [bytebuffer.js](https://www.npmjs.com/package/bytebuffer)
+ *
+ */
 
+/**
+ * @package
+ * @enum {Number}
+ * @property {Number} None - No type/start of table/end of data value.
+ * @property {Number} String - Null-terminated string value.
+ * @property {Number} Int32 - A 32-bit int value.
+ * @property {Number} Float32 - A 32-bit float value.
+ * @property {Number} WideString - A null-terminated string value (should be double-null?)
+ * @property {Number} Color - An RGB color as a 32-bit int value.
+ * @property {Number} UInt64 - A 64-bit int value.
+ * @property {Number} End - End of table/end of data value.
+ */
 const Type = {
   None: 0,
   String: 1,
@@ -12,7 +30,15 @@ const Type = {
   End: 8
 }
 
-exports.parseAppInfo = function (data) {
+/**
+ * Parse the data of appinfo.vdf.
+ * @function
+ * @export
+ * @param {String|Buffer} data - The file data to parse.
+ * @returns {Array} - An array of appinfo entries as anonymous Objects.
+ * @throws {Error} - If there is an error parsing the data.
+ */
+function parseAppInfo (data) {
   let buffer
   let len = data.length
   let first = true
@@ -23,7 +49,7 @@ exports.parseAppInfo = function (data) {
 
   do {
     try {
-      let aid = buffer.readUint32().toString(10) // eslint-disable-line no-unused-vars
+      let aid = buffer.readUint32().toString(10)
       if (aid === 0x00000000) {
         return data
       }
@@ -34,7 +60,7 @@ exports.parseAppInfo = function (data) {
       do {
         skipped.push(buffer.readUint8())
       } while ((skip -= 1) !== 0)
-      /*
+      /* @ignore
         let size = buffer.readUint32() // eslint-disable-line no-unused-vars
         let state = buffer.readUint32() // eslint-disable-line no-unused-vars
         let updated = new Date(buffer.readUint32() * 1000).toString()
@@ -55,11 +81,13 @@ exports.parseAppInfo = function (data) {
         })
       */
 
-      let info = exports.decode(buffer)
+      let info
+      info = decode(buffer)
 
       if (info.config && info.config.steamcontrollertemplateindex && info.config.steamcontrollertemplateindex < 0) {
-        /*
+        /* @ignore
          * Based on https://stackoverflow.com/a/28519774/7665043
+         * Fixes some signed int values that are too big for JS being stored as unsigned int (negative) values.
          */
         info.config.steamcontrollertemplateindex += (1 << 30) * 4
       }
@@ -70,11 +98,11 @@ exports.parseAppInfo = function (data) {
       })
     } catch (err) {
       if (err.message.indexOf('Illegal offset') !== -1 && err.message.indexOf(len) !== -1) {
+        // Ignore; parser doesn't handle EOF, so this is how it's handled.
         break
       } else {
-        console.error(`Parsed: ${data.length}`)
-        console.error(err)
-        process.exit(1)
+        // It's a real error otherwise.
+        throw new Error(err)
       }
     }
   } while (true)
@@ -82,7 +110,15 @@ exports.parseAppInfo = function (data) {
   return data
 }
 
-exports.parsePackageInfo = function (data) {
+/**
+ * Parse the data of packageinfo.vdf.
+ * @function
+ * @export
+ * @param {String|Buffer} data - The file data to parse.
+ * @returns {Array} - An array of packageinfo entries as anonymous Objects.
+ * @throws {Error} - If there is an error parsing the data.
+ */
+function parsePackageInfo (data) {
   let buffer
   let len = data.length
 
@@ -91,16 +127,21 @@ exports.parsePackageInfo = function (data) {
 
   while (true) {
     try {
-      let pid = buffer.readCString().toString() // eslint-disable-line no-unused-vars
-      let hash = [buffer.readUint32(), buffer.readUint32(), buffer.readUint32(), buffer.readUint32(), buffer.readUint32()].toString(16) // eslint-disable-line no-unused-vars
-      let tmp = exports.decode(buffer)
+      let pid = buffer.readCString().toString() // package id
+      let hash = [
+        buffer.readUint32(),
+        buffer.readUint32(),
+        buffer.readUint32(),
+        buffer.readUint32(),
+        buffer.readUint32()
+      ].toString(16)
+      let tmp = decode(buffer)
       data.push(tmp)
     } catch (err) {
       if (err.message.indexOf('Index out of range') !== -1 && err.message.indexOf(len) !== -1) {
         break
       } else {
-        console.error(err)
-        process.exit(1)
+        throw new Error(err)
       }
     }
   }
@@ -108,7 +149,15 @@ exports.parsePackageInfo = function (data) {
   return data
 }
 
-exports.parseShortcuts = function (data) {
+/**
+ * Parse the data of shortcuts.vdf. Auto-converts some data to timestamps/arrays/etc.
+ * @function
+ * @export
+ * @param {String|Buffer} data - The file data to parse.
+ * @returns {Array} - An array of shortcut entries as anonymous Objects.
+ * @throws {Error} - If there is an error parsing the data.
+ */
+function parseShortcuts (data) {
   let autoConvert = {
     booleans: [
       'IsHidden', 'AllowDesktopConfig', 'AllowOverlay', 'OpenVR'
@@ -121,14 +170,22 @@ exports.parseShortcuts = function (data) {
     ]
   }
 
-  data = exports.decode(ByteBuffer.wrap(data, 'hex', true).resize(data.length))
+  data = decode(ByteBuffer.wrap(data, 'hex', true).resize(data.length))
   data = convertData(Object.values(data.shortcuts), autoConvert)
 
   return {shortcuts: data}
-// returnexports.decode(ByteBuffer.wrap(data, 'hex', true).resize(data.length)), autoConvert)
+  // return decode(ByteBuffer.wrap(data, 'hex', true).resize(data.length)), autoConvert)
 }
 
-exports.decode = function decode (buffer) {
+/**
+ * Parse the binary VDF data of buffer.
+ * @function
+ * @export
+ * @param {ByteBuffer} data - The data to parse.
+ * @returns {Object} - The parsed data as a JS object.
+ * @throws {Error} - If there is an error parsing the data.
+ */
+function decode (buffer) {
   let object = {}
 
   do {
@@ -142,7 +199,7 @@ exports.decode = function decode (buffer) {
 
     switch (type) {
       case Type.None:
-        object[name] = exports.decode(buffer)
+        object[name] = decode(buffer)
         break
 
       case Type.String:
@@ -169,6 +226,14 @@ exports.decode = function decode (buffer) {
   return object
 }
 
+/**
+ * Convert parts of data to another type/value -- Timestamp, Boolean, Array, etc.
+ * @function
+ * @param {String|Buffer} data - The file data to parse.
+ * @param {DataConversion} conversion - The conversions to apply to data.
+ * @returns {Array} - An array of appinfo entries as anonymous Objects.
+ * @throws {Error} - If there is an error parsing the data.
+ */
 function convertData (data, conversion) {
   for (let bool of conversion.booleans) {
     data.map(item => {
@@ -200,3 +265,16 @@ function convertData (data, conversion) {
 
   return data
 }
+
+
+/**
+ * @typedef {Object} DataConversion
+ * @property {Array} booleans - The names of some boolean values to convert.
+ * @property {Array} timestamps - The names of some timestamp values to convert.
+ * @property {Array} arrays - The names of some arrays to convert.
+ */
+
+exports.parseAppInfo = parseAppInfo
+exports.parsePackageInfo = parsePackageInfo
+exports.parseShortcuts = parseShortcuts
+exports.decode = decode
