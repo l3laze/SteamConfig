@@ -1,8 +1,15 @@
 'use strict'
 
 const SteamConfig = require('../index.js')
+const cli = require('cli')
 
-let cli = require('cli')
+/*
+ * Slightly increased console width for 'cli' because
+ *  it defaults to 70/25, which is often too small.
+ */
+cli.width = 80
+cli.option_width = 35
+
 let options = cli.parse({
   path: ['p', 'Path to Steam installation.', 'path', null],
   user: ['u', 'User to switch to by account name or display name.', 'string', null]

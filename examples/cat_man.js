@@ -5,12 +5,20 @@ const path = require('path')
 const SteamConfig = require('../index.js')
 const cli = require('cli')
 
-let steam = new SteamConfig()
+/*
+ * Slightly increased console width for 'cli' because
+ *  it defaults to 70/25, which is often too small.
+ */
+cli.width = 80
+cli.option_width = 35
+
 let options = cli.parse({
   path: ['p', 'Path to Steam installation.', 'path', null],
   user: ['u', 'User to backup/restore categories for.', 'string', null],
   mode: ['m', 'Mode: (b)ackup or (r)estore.', 'string', null]
 })
+
+let steam = new SteamConfig()
 
 if (options.path && !fs.existsSync(options.path)) {
   console.error(`Bad path -- Can't find part/all of ${options.path}`)

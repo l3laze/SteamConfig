@@ -2,7 +2,7 @@
   "name": "steamconfig",
   "version": "0.0.2",
   "main": "index.js",
-  "author": "l3l_aze <l3l_aze@yahoo.com>",
+  "author": "Tom <l3l_aze@yahoo.com>",
   "copyright": "Copyright © 2017 ${author}",
   "description": "API to help read/write the Steam Client's configuration.",
   "homepage": "https://github.com/l3laze/SteamConfig",
@@ -14,15 +14,18 @@
   "dependencies": {
     "binary-vdf": "^0.1.0",
     "bluebird": "^3.5.1",
+    "bytebuffer": "^5.0.1",
+    "cuint": "^0.2.2",
     "fast-xml-parser": "^2.8.3",
     "rage-edit": "^1.0.0",
     "simple-vdf2": "^1.1.1",
-    "steam-shortcut-editor": "^3.1.1",
-    "steamid": "^1.1.0",
     "web-request": "^1.0.7"
   },
   "devDependencies": {
     "cli": "^1.0.1",
+    "jsdoc": "^3.5.5",
+    "jsdock": "^1.0.4",
+    "markdox": "^0.1.10",
     "mocha": "^4.1.0",
     "standard": "^10.0.3",
     "steam-dummy": "^0.0.1"
@@ -30,6 +33,12 @@
   "scripts": {
     "lint": "yarn standard",
     "test": "mocha test",
-    "full-test": "yarn lint && yarn test"
+    "full-test": "yarn lint && yarn test",
+    "jsdoc": "jsdoc -c .jsdoc.json -R README.md",
+    "jsdoc-strap": "jsdoc -c .jsdoc.json -R README.md -t ./node_modules/ink-docstrap/template",
+    "markdox": "markdox src/steamconfig.js -o API.md",
+    "fixmd": "node fix_md_async.js -c steamConfig -m ./API.md -j ./src/steamconfig.js",
+    "jsdock-build": "jsdock clean && jsdock build",
+    "jsdock-publish": "jsdock build && jsdock publish"
   }
 }
