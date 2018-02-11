@@ -53,7 +53,6 @@ async function run () {
         }
 
         console.info(`Found ${funcs.length} async functions total in ${options.js}.`)
-        console.info(funcs)
 
         data = ('' + await fs.readFileAsync(options.md)).replace('\r\n', '\n').split('\n')
 
@@ -67,7 +66,6 @@ async function run () {
                 ' `async` ' +
                 data[ x ].slice(data[ x ].indexOf('##') + 2)
               modified += 1
-              console.info(`Modified: ${data[ x ].trim()}`)
             }
           }
         }

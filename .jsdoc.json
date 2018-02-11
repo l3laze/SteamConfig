@@ -16,7 +16,13 @@
         "monospaceLinks": true,
         "default": {
           "includeDate": false
-        }
+        },
+        "includeDate": false,
+        "navType": "vertical",
+        "linenums": true,
+        "collapseSymbols": true,
+        "inverseNav": true,
+        "includeSource": false
     },
     "opts": {
       "destination": "./docs",

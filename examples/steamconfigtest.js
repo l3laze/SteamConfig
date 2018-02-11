@@ -46,7 +46,33 @@ async function run () {
       })
     }
     console.info(`\t\t\t   ${apps.okay.length}\t    ${apps.update.length}\t     ${apps.installing.length}\t\t${apps.useless.length}`)
+    console.info(`Appinfo Entries:\t${sc.appinfo.length}`)
+    console.info(`Packageinfo Entries:\t${sc.packageinfo.length}`)
+    let badRE = /[^A-Za-z0-9]/
+    let badKey
+    let keys
+    let wasBad = {}
+    let tmp
+    let filtered = sc.packageinfo.map(item => {
+      keys = Object.keys(item)
+      badKey = keys.filter(key => badRE.test(key))[ 0 ] || undefined
 
+      if (badKey !== undefined) {
+        tmp = item
+        delete tmp[ badKey]
+
+        tmp = {
+          [`${tmp.packageid}`]: tmp
+        }
+
+        wasBad[ item.packageid ] = item
+        return tmp
+      } else {
+        return item
+      }
+    })
+    console.info(`${Object.keys(wasBad).length} packageinfo entries were improperly parsed -- fixed..`)
+    console.info(filtered)
   } catch (err) {
     console.error(err)
     process.exit(1)

@@ -12,21 +12,22 @@
     "url": "git+github.com/l3laze/SteamConfig.git"
   },
   "dependencies": {
-    "binary-vdf": "^0.1.0",
     "bluebird": "^3.5.1",
     "bytebuffer": "^5.0.1",
     "cuint": "^0.2.2",
-    "fast-xml-parser": "^2.8.3",
-    "rage-edit": "^1.0.0",
+    "fast-xml-parser": "^3.0.1",
+    "node-fetch": "^2.0.0",
+    "rage-edit": "^1.0.2",
     "simple-vdf2": "^1.1.1",
     "web-request": "^1.0.7"
   },
   "devDependencies": {
     "cli": "^1.0.1",
+    "ink-docstrap": "^1.3.2",
     "jsdoc": "^3.5.5",
     "jsdock": "^1.0.4",
     "markdox": "^0.1.10",
-    "mocha": "^4.1.0",
+    "mocha": "^5.0.0",
     "standard": "^10.0.3",
     "steam-dummy": "^0.0.1"
   },
@@ -35,10 +36,9 @@
     "test": "mocha test",
     "full-test": "yarn lint && yarn test",
     "jsdoc": "jsdoc -c .jsdoc.json -R README.md",
+    "jsdock": "jsdock build && jsdock publish",
     "jsdoc-strap": "jsdoc -c .jsdoc.json -R README.md -t ./node_modules/ink-docstrap/template",
-    "markdox": "markdox src/steamconfig.js -o API.md",
-    "fixmd": "node fix_md_async.js -c steamConfig -m ./API.md -j ./src/steamconfig.js",
-    "jsdock-build": "jsdock clean && jsdock build",
-    "jsdock-publish": "jsdock build && jsdock publish"
+    "markdox": "markdox src/steamconfig.js -o API.md && yarn fixmd",
+    "fixmd": "node fix_md_async.js -c steamConfig -m ./API.md -j ./src/steamconfig.js"
   }
 }

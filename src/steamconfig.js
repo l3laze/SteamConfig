@@ -16,8 +16,9 @@ const OS = require('os')
 const fs = BB.promisifyAll(require('fs'))
 const path = require('path')
 const FXP = require('fast-xml-parser')
-const WebRequest = require('web-request')
+const fetch = BB.promisifyAll(require('node-fetch'))
 const UInt64 = require('cuint').UINT64
+const Long = require('long')
 const TVDF = require('simple-vdf2')
 const {Registry} = require('rage-edit')
 const BVDF = require('./../bvdf.js')
@@ -509,7 +510,7 @@ function prepareFileNames (names) {
  * @function
  * @param {String} id64 - The SteamID64 of the user to calculte the Steam3:accountId of.
  * @return {String} - The accountId of the user.
- * @throws {Error} - If cuint.UInt64 has an issue with the data.
+ * @throws {Error} - If Long has an issue with the data.
  */
 function getAccountIdFromId64 (id64) {
   try {
@@ -537,6 +538,9 @@ function afterLoad (sc, name) {
       }).map(function mapLibs (item) {
         return sc.libraryfolders.LibraryFolders[ item ]
       })
+      break
+
+    case 'packageinfo':
       break
 
     default:

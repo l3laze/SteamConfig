@@ -1,10 +1,13 @@
 /**
  * @author Tom <l3l&#95;aze&#64;yahoo&#46;com>
+ * @file bvdf.js
  * @module bvdf
  * Based on [seishun's node-steam/lib/VDF.js](https://github.com/seishun/node-steam).
  * @requires [bytebuffer.js](https://www.npmjs.com/package/bytebuffer)
  *
  */
+
+ const ByteBuffer = require('bytebuffer')
 
 /**
  * @package
@@ -196,6 +199,12 @@ function decode (buffer) {
     }
 
     let name = buffer.readCString()
+
+    /*
+      if (type === Type.None && !name && !Object.keys(object).length) {
+        name = buffer.readCString()
+      }
+    */
 
     switch (type) {
       case Type.None:
