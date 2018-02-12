@@ -2,13 +2,19 @@ const SteamConfig = require('../src/steamconfig.js').SteamConfig
 const paths = require('../src/steamconfig.js').SteamPaths
 
 let sc = new SteamConfig()
+let requestGenres = require('../steamdata-utils.js').requestGenres;
+
+(async () => {
+  console.info(await requestGenres('220'))
+  console.info(await requestGenres('218620'))
+})()
 
 async function run () {
   try {
     sc.rootPath = sc.detectRoot()
     sc.appendToApps = true
     await sc.load(paths.all)
-    await sc.load(sc.libraries.map(function mapLibs(lib) { return ['library', lib + '/steamapps'] }))
+    await sc.load(sc.libraries.map(function mapLibs (lib) { return ['library', lib + '/steamapps'] }))
     let skin = sc.registry.Registry.HKCU.Software.Valve.Steam.SkinV4
     skin = (skin !== '' ? skin : 'Default')
 
@@ -21,7 +27,7 @@ async function run () {
     // console.info(`Owned Apps:\t${sc.user.owned.length}`)
     console.info(`Categorized Apps:\t${Object.values(
         sc.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps
-      ).filter(item =>item.tags || item.Hidden).length}`)
+      ).filter(item => item.tags || item.Hidden).length}`)
     console.info(`App Status:\t\tPlayable  Update  Installing  Useless`)
     let apps = {
       okay: sc.steamapps.filter(item => {
@@ -53,13 +59,13 @@ async function run () {
     let keys
     let wasBad = {}
     let tmp
-    let filtered = sc.packageinfo.map(item => {
+    let filtered = sc.packageinfo.map(item => { // eslint-disable-line no-unused-vars
       keys = Object.keys(item)
       badKey = keys.filter(key => badRE.test(key))[ 0 ] || undefined
 
       if (badKey !== undefined) {
         tmp = item
-        delete tmp[ badKey]
+        delete tmp[ badKey ]
 
         tmp = {
           [`${tmp.packageid}`]: tmp
@@ -72,7 +78,7 @@ async function run () {
       }
     })
     console.info(`${Object.keys(wasBad).length} packageinfo entries were improperly parsed -- fixed..`)
-    console.info(filtered)
+    // console.info(filtered)
   } catch (err) {
     console.error(err)
     process.exit(1)

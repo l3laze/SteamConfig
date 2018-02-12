@@ -12,13 +12,13 @@
 'use strict'
 
 const BB = require('bluebird').Promise
-const OS = require('os')
 const fs = BB.promisifyAll(require('fs'))
 const path = require('path')
 const FXP = require('fast-xml-parser')
-const fetch = BB.promisifyAll(require('node-fetch'))
+const fetch = BB.promisifyAll(require('node-fetch')) // eslint-disable-line no-unused-vars
+const WebRequest = require('web-request')
 const UInt64 = require('cuint').UINT64
-const Long = require('long')
+const Long = require('long') // eslint-disable-line no-unused-vars
 const TVDF = require('simple-vdf2')
 const {Registry} = require('rage-edit')
 const BVDF = require('./../bvdf.js')
@@ -399,7 +399,7 @@ SteamConfig.prototype.requestTags = async function requestTags (force = false) {
  * @method
  */
 SteamConfig.prototype.logData = function logData () {
-  let logData = ''
+  let logData = '' // eslint-disable-line no-unused-vars
   if (this.rootPath) {
     logData += `Root\t${this.rootPath}\n`
   }
@@ -432,7 +432,7 @@ async function loadApps (library) {
       }
     })
 
-    apps = await Promise.all(apps.map(async function loadAppData(item) {
+    apps = await Promise.all(apps.map(async function loadAppData (item) {
       item = '' + await fs.readFileAsync(path.join(library, item))
       item = TVDF.parse(item)
       return item
@@ -459,7 +459,7 @@ async function loadSkins (folder) {
   try {
     skins = await fs.readdirAsync(folder)
 
-    return skins.filter(function loadSkinData(item) {
+    return skins.filter(function loadSkinData (item) {
       if (item.indexOf('.txt') === -1 && item.indexOf('.DS_Store') === -1) {
         return item
       }
@@ -494,7 +494,7 @@ function prepareFileNames (names) {
   let last = []
 
   for (name of names) {
-    if (typeof name === 'string' && name === 'sharedconfig' || name === 'localconfig' || name === 'shortcuts') {
+    if (typeof name === 'string' && (name === 'sharedconfig' || name === 'localconfig' || name === 'shortcuts')) {
       last.push(name)
     } else {
       first.push(name)
@@ -509,7 +509,7 @@ function prepareFileNames (names) {
  * @name getAccountIdFromId64
  * @function
  * @param {String} id64 - The SteamID64 of the user to calculte the Steam3:accountId of.
- * @return {String} - The accountId of the user.
+ * @return {String} - The accountId of the user.
  * @throws {Error} - If Long has an issue with the data.
  */
 function getAccountIdFromId64 (id64) {
@@ -529,7 +529,7 @@ function getAccountIdFromId64 (id64) {
  * @param {String} name - The name of the file that was loaded without the extension (as from [SteamPaths](module-SteamPaths.html).
  */
 function afterLoad (sc, name) {
-  switch(name) {
+  switch (name) {
     case 'libraryfolders':
       sc.libraries = Object.keys(sc.libraryfolders.LibraryFolders).filter(function filterLibs (item) {
         if (item !== 'TimeNextStatsReport' && item !== 'ContentStatsID') {

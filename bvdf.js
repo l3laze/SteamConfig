@@ -7,7 +7,7 @@
  *
  */
 
- const ByteBuffer = require('bytebuffer')
+const ByteBuffer = require('bytebuffer')
 
 /**
  * @package
@@ -130,8 +130,9 @@ function parsePackageInfo (data) {
 
   while (true) {
     try {
-      let pid = buffer.readCString().toString() // package id
-      let hash = [
+      // package id
+      let pid = buffer.readCString().toString() // eslint-disable-line no-unused-vars
+      let hash = [ // eslint-disable-line no-unused-vars
         buffer.readUint32(),
         buffer.readUint32(),
         buffer.readUint32(),
@@ -274,7 +275,6 @@ function convertData (data, conversion) {
 
   return data
 }
-
 
 /**
  * @typedef {Object} DataConversion
