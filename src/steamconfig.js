@@ -14,11 +14,7 @@
 const BB = require('bluebird').Promise
 const fs = BB.promisifyAll(require('fs'))
 const path = require('path')
-const FXP = require('fast-xml-parser')
-const fetch = BB.promisifyAll(require('node-fetch')) // eslint-disable-line no-unused-vars
-const WebRequest = require('web-request')
 const UInt64 = require('cuint').UINT64
-const Long = require('long') // eslint-disable-line no-unused-vars
 const TVDF = require('simple-vdf2')
 const {Registry} = require('rage-edit')
 const BVDF = require('./../bvdf.js')
@@ -31,8 +27,6 @@ const BVDF = require('./../bvdf.js')
  * @property {Object} user - Current user.
  * @property {Array} libraries - A Path-type entry for each of the non-default Steam Library Folders of the Steam installation.
  * @property {Boolean} appendToApps - Whether to append apps or destroy the old data each time a single steamapps folder is loaded.
- * @property {Boolean} cacheEnabled - The current cache setting. Enabled = true, disabled = false.
- * @property {Path} cacheFolder - Path to use for the cache folder.
  *
  * @property {Object} appinfo - Steam/appcache/appinfo.vdf.
  * @property {Object} config - Steam/config/config.vdf.
@@ -52,8 +46,6 @@ function SteamConfig () {
   this.user = null
   this.libraries = []
   this.appendToApps = false
-  this.cacheEnabled = false
-  this.cacheFolder = null
 
   this.arch = require('os').arch()
   this.os = require('os').platform()
@@ -312,103 +304,53 @@ SteamConfig.prototype.getPath = function getPath (name) {
 }
 
 /**
- * Request the current user's list of owned apps from the internet.
- * @method
- * @async
- * @param {Boolean} force - Force to get a new copy instead of loading cached copy.
- * @throws {Error} - If the user has not been defined yet, or there is an error reading from or writing to the cache, or there is an error loading the file from the internet, or there is an error parsing the data (XML) and converting it to JSON.
- */
-SteamConfig.prototype.requestOwnedApps = async function requestOwnedApps (force = false) {
-  let data
-  let cacheFile
-
-  try {
-    if (!this.user) {
-      throw new ReferenceError('The user has not been defined yet (@requestOwnedApps).')
-    }
-
-    if (this.cacheEnabled) {
-      cacheFile = path.join(this.cachePath, `owned-${this.user.accountId}.json`)
-
-      if (!fs.existsSync(this.cachePath)) {
-        fs.mkdirSync(this.cachePath)
-      }
-    }
-
-    if (this.cacheEnabled && (this.cachePath && fs.existsSync(this.cachePath)) && (cacheFile && fs.existsSync(cacheFile)) && !force) {
-      data = JSON.parse(await fs.readFileAsync(cacheFile))
-    } else {
-      data = await WebRequest.get(`https://steamcommunity.com/profiles/${this.user.id64}/games/?tab=all&xml=1`)
-      data = FXP.parse(data.content).gamesList.games.game
-
-      if (this.cacheEnabled) {
-        await fs.writeFileAsync(cacheFile, JSON.stringify(data))
-      }
-    }
-  } catch (err) {
-    throw new Error(err)
-  }
-
-  this.user[ 'owned' ] = data
-}
-
-/**
- * Request a list of the popular tags from the internet.
- * @method
- * @async
- * @param {Boolean} force - Force request to get a new copy instead of using a cached copy.
- * @returns {Array} - An Array of Strings that represents the popular tags on Steam.
- * @throws {Error} - If there is an error loading the tags list from the local cache or the internet.
- */
-SteamConfig.prototype.requestTags = async function requestTags (force = false) {
-  let data
-  let cacheFile = path.join(this.cachePath, `tags.json`)
-
-  try {
-    if (this.cacheEnabled) {
-      if (!fs.existsSync(this.cachePath)) {
-        fs.mkdirSync(this.cachePath)
-      }
-
-      cacheFile = path.join(this.cachePath, `tags.json`)
-    }
-
-    if (this.cacheEnabled && (this.cachePath && fs.existsSync(this.cachePath)) && (cacheFile && fs.existsSync(cacheFile)) && !force) {
-      data = JSON.parse(await fs.readFileAsync(cacheFile))
-    }
-
-    if (this.cacheEnabled && (this.cachePath && fs.existsSync(this.cachePath)) && (cacheFile && fs.existsSync(cacheFile)) && !force) {
-      data = JSON.parse(await fs.readFileAsync(cacheFile))
-    } else {
-      data = await WebRequest.get('https://store.steampowered.com/tagdata/populartags/english')
-      data = JSON.parse(data.message.body)
-
-      if (this.cacheEnabled) {
-        await fs.writeFileAsync(cacheFile, JSON.stringify(data))
-      }
-    }
-  } catch (err) {
-    throw new Error(err)
-  }
-
-  this.tags = data
-}
-
-/**
  * Get a log of a sample of the data that exists.
  * @method
  */
 SteamConfig.prototype.logData = function logData () {
-  let logData = '' // eslint-disable-line no-unused-vars
-  if (this.rootPath) {
-    logData += `Root\t${this.rootPath}\n`
-  }
+  let logData = ''
 
-  logData += `Users\t\tCurrent User\n`
-
-  if (this.user) {
-    logData += this.user.displayName
+  logData += `--- Root --> ${this.rootPath}\n`
+  logData += '------------------ Steam Installation Status ------------------\n'
+  logData += 'Users\tSkins\tLibraries\tInstalled Apps\n'
+  logData += `${Object.keys(this.loginusers.users).length}\t  ${this.skins.length}\t  ${this.libraries.length} + 1\t\t     ${this.steamapps.length}\n`
+  logData += `--------------------- Installed App Status --------------------\n`
+  let apps = {
+    okay: this.steamapps.filter(item => {
+      if (item.AppState.StateFlags === '4') {
+        return item
+      }
+    }),
+    update: this.steamapps.filter(item => {
+      if (item.AppState.StateFlags === '6') {
+        return item
+      }
+    }),
+    installing: this.steamapps.filter(item => {
+      if (item.AppState.StateFlags === '1026' || item.AppState.StateFlags === '1542') {
+        return item
+      }
+    }),
+    useless: this.steamapps.filter(item => {
+      if (item.AppState.StateFlags !== '4' && item.AppState.StateFlags !== '6' && item.AppState.StateFlags !== '1542' && item.AppState.StateFlags !== '1026') {
+        return item
+      }
+    })
   }
+  logData += `Playable    Update\tInstalling\tUseless\n`
+  logData += `   ${apps.okay.length}\t       ${apps.update.length}\t     ${apps.installing.length}\t\t   ${apps.useless.length}\n`
+  logData += `--------------------- Current User Status ---------------------\n`
+  logData += `    SteamID64   \taccountID\t  account\tlevel\n`
+  logData += `${this.user.id64}\t${this.user.accountId}\t${this.user.accountName}\t  ${this.localconfig.UserLocalConfigStore.Software.Valve.Steam.PlayerLevel}\n`
+  logData += `----------------------------------------------------------------\n`
+  logData += `Owned Apps\t  Categorized + Hidden\t  Shortcuts\n`
+  logData += `   ${this.user.owned.length}\t\t\t  ${Object.values(this.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps).filter(item =>
+    (item.tags || item.Hidden || false)
+  ).length}\t\t      ${this.shortcuts.shortcuts.length}\n`
+  logData += `----------------------------------------------------------------\n`
+  logData += `-------------- Brought to you by: A LOT of coffee --------------`
+
+  return logData
 }
 
 /**
@@ -512,6 +454,7 @@ function prepareFileNames (names) {
  * @return {String} - The accountId of the user.
  * @throws {Error} - If Long has an issue with the data.
  */
+SteamConfig.prototype.getAccountIdFromId64 = getAccountIdFromId64
 function getAccountIdFromId64 (id64) {
   try {
     return '' + (new UInt64(id64, 10).toNumber() & 0xFFFFFFFF) >>> 0

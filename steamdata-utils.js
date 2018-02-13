@@ -10,34 +10,168 @@ const BB = require('bluebird').Promise
 const fs = BB.promisifyAll(require('fs')) // eslint-disable-line no-unused-vars
 const path = require('path') // eslint-disable-line no-unused-vars
 const fetch = BB.promisifyAll(require('node-fetch'))
+const FXP = require('fast-xml-parser')
 
-exports.requestGenres = async function requestGenres (appid) {
-  let res
+/**
+ * Request (scrape) a list of the genre's of an app by it's appid from it's page on store.steampowered.com.
+ * @method
+ * @async
+ * @param {String|Number} appid - The appid to get the genres for.
+ * @param {Boolean} force - Force request to get a new copy instead of using a cached copy.
+ * @param {Object} cache - Cache options (enabled, folder).
+ * @returns {Array} - An Array of Strings that represent the apps genres on it's Store page.
+ * @throws {Error} - If there is an error loading the page from the local cache or the internet, or scraping the internet data.
+ */
+exports.requestGenres = async function requestGenres (appid, force = false, cache) {
+  if (!appid) {
+    throw new Error('Need an appid to requestGenres.')
+  }
+
+  if (typeof appid === 'number') {
+    appid = '' + appid
+  }
+
+  let data
   let genres = []
   let index
+  let cacheFile
 
-  res = await fetch(`http://store.steampowered.com/app/${appid}/`, {
-    credentials: 'include',
-    headers: {
-      cookie: 'birthtime=189324001' // 1/1/1976 @ 12:00:01 AM
-    }
-  })
+  try {
+    if (cache.enabled && cache.folder) {
+      cacheFile = path.join(cache.folder, 'genres.json')
 
-  res = '' + await res.text()
-
-  index = res.indexOf('<div class="details_block">')
-
-  do {
-    index = res.indexOf('http://store.steampowered.com/genre/', index) // 36 characters
-
-    if (index === -1) {
-      break
+      if (!fs.existsSync(cache.folder)) {
+        fs.mkdirSync(cache.folder)
+      }
     }
 
-    index += 36
+    if (cache.enabled && (cache.folder && fs.existsSync(cache.folder)) && (cacheFile && fs.existsSync(cacheFile) && (data = JSON.parse('' + await (fs.readFileAsync(cacheFile))))[ appid ]) && !force) {
+      genres = data[ appid ] || []
+    } else {
+      data = undefined
+      data = await fetch(`http://store.steampowered.com/app/${appid}/`, {
+        credentials: 'include',
+        headers: {
+          cookie: 'birthtime=189324001' // 1/1/1976 @ 12:00:01 AM
+        }
+      })
 
-    genres.push(res.substring(index, res.indexOf('/', index)))
-  } while (true)
+      data = '' + await data.text()
 
-  return genres
+      index = data.indexOf('<div class="details_block">')
+
+      do {
+        index = data.indexOf('http://store.steampowered.com/genre/', index) // 36 characters
+
+        if (index === -1) {
+          break
+        }
+
+        index += 36
+
+        genres.push(data.substring(index, data.indexOf('/', index)))
+      } while (true)
+
+      if (cache.enabled && fs.existsSync(cacheFile)) {
+        data = JSON.parse('' + await fs.readFileAsync(cacheFile))
+        data[ appid ] = genres
+      } else {
+        data = {}
+        data[ appid ] = genres
+      }
+
+      await fs.writeFileAsync(cacheFile, JSON.stringify(data))
+    }
+  } catch (err) {
+    throw new Error(err)
+  }
+
+  return Array.from(genres)
+}
+
+/**
+ * Request the current user's list of owned apps from store.steampowered.com.
+ * @method
+ * @async
+ * @param {String|Number} id64 - The user id64 to get the owned apps list for.
+ * @param {Boolean} force - Force to get a new copy instead of loading cached copy.
+ * @param {Object} cache - Cache options (enabled, folder).
+ * @returns {Array} - An Array of Objects that represent the user's owned apps.
+ * @throws {Error} - If the user has not been defined yet, or there is an error reading from or writing to the cache, or there is an error loading the file from the internet, or there is an error parsing the data (XML) and converting it to JSON.
+ */
+exports.requestOwnedApps = async function requestOwnedApps (id64, force = false, cache) {
+  if (!id64) {
+    throw new Error('Need a user\'s SteamID64 to requestOwnedApps.')
+  }
+
+  if (typeof id64 === 'number') {
+    id64 = '' + id64
+  }
+
+  let data
+  let cacheFile
+
+  try {
+    if (cache.enabled && cache.folder) {
+      cacheFile = path.join(cache.folder, `owned-${id64}.json`)
+
+      if (!fs.existsSync(cache.folder)) {
+        fs.mkdirSync(cache.folder)
+      }
+    }
+
+    if (cache.enabled && (cache.folder && fs.existsSync(cache.folder)) && (cacheFile && fs.existsSync(cacheFile)) && !force) {
+      data = JSON.parse(await fs.readFileAsync(cacheFile))
+    } else {
+      data = await fetch(`https://steamcommunity.com/profiles/${id64}/games/?tab=all&xml=1`)
+      data = FXP.parse(await data.text()).gamesList.games.game
+
+      if (cache.enabled) {
+        await fs.writeFileAsync(cacheFile, JSON.stringify(data))
+      }
+    }
+  } catch (err) {
+    throw new Error(err)
+  }
+
+  return data
+}
+
+/**
+ * Request a list of the popular tags from store.steampowered.com.
+ * @method
+ * @async
+ * @param {Boolean} force - Force request to get a new copy instead of using a cached copy.
+ * @param {Object} cache - Cache options (enabled, folder).
+ * @returns {Array} - An Array of Strings that represents the popular tags on Steam.
+ * @throws {Error} - If there is an error loading the tags list from the local cache or the internet.
+ */
+exports.requestTags = async function requestTags (force = false, cache) {
+  let data
+  let cacheFile
+
+  try {
+    if (cache.enabled && cache.folder) {
+      if (!fs.existsSync(cache.folder)) {
+        fs.mkdirSync(cache.folder)
+      }
+
+      cacheFile = path.join(cache.folder, `tags.json`)
+    }
+
+    if (cache.enabled && (cache.folder && fs.existsSync(cache.folder)) && (cacheFile && fs.existsSync(cacheFile)) && !force) {
+      data = JSON.parse(await fs.readFileAsync(cacheFile))
+    } else if (force) {
+      data = await fetch('https://store.steampowered.com/tagdata/populartags/english')
+      data = JSON.parse(data.text())
+
+      if (cache.enabled) {
+        await fs.writeFileAsync(cacheFile, JSON.stringify(data))
+      }
+    }
+  } catch (err) {
+    throw new Error(err)
+  }
+
+  return data
 }
