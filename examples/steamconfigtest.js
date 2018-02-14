@@ -28,7 +28,7 @@ async function run () {
     if (sc.user.accountName === 'batman') {
       logInfo()
     } else {
-      console.info(sc.logData())
+      console.info(sc.logData('string'))
     }
   } catch (err) {
     console.error(err)

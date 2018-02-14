@@ -11,13 +11,13 @@
 
 'use strict'
 
-const BB = require('bluebird').Promise
-const fs = BB.promisifyAll(require('fs'))
+const fs = require('bluebird').Promise.promisifyAll(require('fs'))
 const path = require('path')
-const UInt64 = require('cuint').UINT64
 const TVDF = require('simple-vdf2')
 const {Registry} = require('rage-edit')
 const BVDF = require('./../bvdf.js')
+
+const getAccountIdFromId64 = require('../steamdata-utils.js').getAccountIdFromId64
 
 /**
  * @class
@@ -85,7 +85,7 @@ function SteamConfig () {
  */
 SteamConfig.prototype.load = async function load (names) {
   if (!names || ((typeof names !== 'string' || names === '') && (typeof names !== 'object' || names.constructor !== Array))) {
-    throw new Error(`Invalid arg for load: Value ${names} with type ${typeof names}.`)
+    throw new Error(`Invalid arg for SteamConfig.load: Value ${names} with type ${typeof names}.`)
   }
 
   names = prepareFileNames(names)
@@ -299,7 +299,7 @@ SteamConfig.prototype.getPath = function getPath (name) {
     case 'steamapps':
       return path.join(this.rootPath, 'steamapps')
     default:
-      throw new Error(`Cannot find unknown path ${name}.`)
+      throw new Error(`Unknown path: ${name}.`)
   }
 }
 
@@ -307,50 +307,81 @@ SteamConfig.prototype.getPath = function getPath (name) {
  * Get a log of a sample of the data that exists.
  * @method
  */
-SteamConfig.prototype.logData = function logData () {
-  let logData = ''
+SteamConfig.prototype.logData = function logData (asType) {
+  if (typeof asType !== 'string') {
+    throw new Error(`Invalid argument for logData ${typeof asType}; should be a string.`)
+  } else {
+    asType = asType.toLowerCase()
+  }
 
-  logData += `--- Root --> ${this.rootPath}\n`
-  logData += '------------------ Steam Installation Status ------------------\n'
-  logData += 'Users\tSkins\tLibraries\tInstalled Apps\n'
-  logData += `${Object.keys(this.loginusers.users).length}\t  ${this.skins.length}\t  ${this.libraries.length} + 1\t\t     ${this.steamapps.length}\n`
-  logData += `--------------------- Installed App Status --------------------\n`
-  let apps = {
-    okay: this.steamapps.filter(item => {
+  if (asType !== 'object' && asType !== 'string') {
+    throw new Error(`Unknown type for logData: ${asType}. Should be 'string' or 'object'.`)
+  }
+
+  let logData = {}
+
+  logData.rootPath = this.rootPath || null
+  logData.users = Object.keys(this.loginusers ? this.loginusers.users : []).length
+  logData.skins = this.skins || 0
+  logData.libraries = this.libraries || 0
+  logData.steamapps = this.steamapps || 0
+  logData.appStatus = {
+    okay: (this.steamapps ? this.steamapps : []).filter(item => {
       if (item.AppState.StateFlags === '4') {
         return item
       }
-    }),
-    update: this.steamapps.filter(item => {
+    }) || 0,
+    update: (this.steamapps ? this.steamapps : []).filter(item => {
       if (item.AppState.StateFlags === '6') {
         return item
       }
-    }),
-    installing: this.steamapps.filter(item => {
+    }) || 0,
+    installing: (this.steamapps ? this.steamapps : []).filter(item => {
       if (item.AppState.StateFlags === '1026' || item.AppState.StateFlags === '1542') {
         return item
       }
-    }),
-    useless: this.steamapps.filter(item => {
+    }) || 0,
+    useless: (this.steamapps ? this.steamapps : []).filter(item => {
       if (item.AppState.StateFlags !== '4' && item.AppState.StateFlags !== '6' && item.AppState.StateFlags !== '1542' && item.AppState.StateFlags !== '1026') {
         return item
       }
-    })
+    }) || 0
   }
-  logData += `Playable    Update\tInstalling\tUseless\n`
-  logData += `   ${apps.okay.length}\t       ${apps.update.length}\t     ${apps.installing.length}\t\t   ${apps.useless.length}\n`
-  logData += `--------------------- Current User Status ---------------------\n`
-  logData += `    SteamID64   \taccountID\t  account\tlevel\n`
-  logData += `${this.user.id64}\t${this.user.accountId}\t${this.user.accountName}\t  ${this.localconfig.UserLocalConfigStore.Software.Valve.Steam.PlayerLevel}\n`
-  logData += `----------------------------------------------------------------\n`
-  logData += `Owned Apps\t  Categorized + Hidden\t  Shortcuts\n`
-  logData += `   ${this.user.owned.length}\t\t\t  ${Object.values(this.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps).filter(item =>
-    (item.tags || item.Hidden || false)
-  ).length}\t\t      ${this.shortcuts.shortcuts.length}\n`
-  logData += `----------------------------------------------------------------\n`
-  logData += `-------------- Brought to you by: A LOT of coffee --------------`
+  logData.currentUser = {
+    id64: this.user ? this.user.id64 : 0,
+    accountId: this.user ? this.user.accountId : 0,
+    accountName: this.user ? this.user.accountName : 'Hello',
+    personaName: this.user ? this.user.displayName : 'World!',
+    level: this.localconfig ? this.localconfig.UserLocalConfigStore.Software.Valve.Steam.PlayerLevel : 'All of it',
+    owned: this.user ? this.user.owned : 'All of it',
+    categorized: Object.values(this.sharedconfig ? this.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps : []).filter(item => item.tags || item.Hidden || false),
+    shortcuts: this.shortcuts ? this.shortcuts.shortcuts.length : 'All of it'
+  }
+  logData.provider = 'Brought to you by: A LOT of coffee'
 
-  return logData
+  if (asType === 'object') {
+    return logData
+  } else if (asType === 'string') {
+    let logStr = ''
+
+    logStr += `--- Root --> ${logData.rootPath}\n`
+    logStr += '------------------ Steam Installation Status ------------------\n'
+    logStr += 'Users\tSkins\tLibraries\tInstalled Apps\n'
+    logStr += `  ${logData.users}\t  ${logData.skins.length}\t  ${logData.libraries.length} + 1\t\t     ${logData.steamapps.length}\n`
+    logStr += `--------------------- Installed App Status --------------------\n`
+    logStr += `Playable    Update\tInstalling\tUseless\n`
+    logStr += `   ${logData.appStatus.okay.length}\t       ${logData.appStatus.update.length}\t     ${logData.appStatus.installing.length}\t\t   ${logData.appStatus.useless.length}\n`
+    logStr += `------------------------- User Status -------------------------\n`
+    logStr += `    SteamID64   \taccountID\t  account\tlevel\n`
+    logStr += `${logData.currentUser.id64}\t${logData.currentUser.accountId}\t${logData.currentUser.accountName}\t  ${logData.currentUser.level}\n`
+    logStr += `---------------------------------------------------------------\n`
+    logStr += `Owned Apps\t  Categorized + Hidden\t  Shortcuts\n`
+    logStr += `   ${logData.currentUser.owned.length}\t\t\t  ${logData.currentUser.categorized.length}\t\t      ${logData.currentUser.shortcuts}\n`
+    logStr += `---------------------------------------------------------------\n`
+    logStr += `-------------- Brought to you by: A LOT of coffee -------------`
+
+    return logStr
+  }
 }
 
 /**
@@ -447,23 +478,6 @@ function prepareFileNames (names) {
 }
 
 /**
- * Internal function to get a user's account ID from their SteamID 64.
- * @name getAccountIdFromId64
- * @function
- * @param {String} id64 - The SteamID64 of the user to calculte the Steam3:accountId of.
- * @return {String} - The accountId of the user.
- * @throws {Error} - If Long has an issue with the data.
- */
-SteamConfig.prototype.getAccountIdFromId64 = getAccountIdFromId64
-function getAccountIdFromId64 (id64) {
-  try {
-    return '' + (new UInt64(id64, 10).toNumber() & 0xFFFFFFFF) >>> 0
-  } catch (err) {
-    throw new Error(err)
-  }
-}
-
-/**
  * Internal function to do some special handling after loading specific files.
  * So far it only handles "libraryfolders" by setting sc.libraries to the list of entries.
  * @name afterLoad
@@ -481,9 +495,6 @@ function afterLoad (sc, name) {
       }).map(function mapLibs (item) {
         return sc.libraryfolders.LibraryFolders[ item ]
       })
-      break
-
-    case 'packageinfo':
       break
 
     default:

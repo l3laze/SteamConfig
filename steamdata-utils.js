@@ -11,6 +11,27 @@ const fs = BB.promisifyAll(require('fs')) // eslint-disable-line no-unused-vars
 const path = require('path') // eslint-disable-line no-unused-vars
 const fetch = BB.promisifyAll(require('node-fetch'))
 const FXP = require('fast-xml-parser')
+const UInt64 = require('cuint').UINT64
+
+/**
+ * Internal function to get a user's account ID from their SteamID 64.
+ * @name getAccountIdFromId64
+ * @function
+ * @param {String} id64 - The SteamID64 of the user to calculte the Steam3:accountId of.
+ * @return {String} - The accountId of the user.
+ * @throws {Error} - If Long has an issue with the data.
+ */
+exports.getAccountIdFromId64 = function getAccountIdFromId64 (id64) {
+  if (typeof id64 !== 'string' || /[^\d]/.test(id64)) {
+    throw new Error(`Invalid argument type for getAccountIdFromId64: ${typeof id64}. Should be a number as a 'string'.`)
+  }
+
+  try {
+    return '' + ((new UInt64(id64, 10).toNumber() & 0xFFFFFFFF) >>> 0)
+  } catch (err) {
+    throw new Error(err)
+  }
+}
 
 /**
  * Request (scrape) a list of the genre's of an app by it's appid from it's page on store.steampowered.com.
