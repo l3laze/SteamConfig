@@ -115,14 +115,14 @@ SteamConfig.prototype.load = async function load (names) {
       }
 
       if ((name === 'shortcuts' || name === 'localconfig' || name === 'sharedconfig') && !this.user) {
-        this.user = this.detectUser()
+        throw new Error('The user must be set before user-specific data can be loaded.')
       }
 
       if (!file) {
         file = this.getPath(name)
       }
 
-      if (!fs.existsSync(file)) {
+      if (!fs.existsSync(file) && name !== 'shortcuts') {
         throw new Error(`Cannot load ${name} because ${file} does not exist.`)
       }
 
@@ -136,7 +136,11 @@ SteamConfig.prototype.load = async function load (names) {
           break
 
         case 'shortcuts':
-          this.shortcuts = await BVDF.parseShortcuts(Buffer.from(await fs.readFileAsync(file)))
+          if (fs.existsSync(file)) {
+            this.shortcuts = await BVDF.parseShortcuts(Buffer.from(await fs.readFileAsync(file)))
+          } else {
+            this.shortcuts = {shortcuts: []}
+          }
           break
 
         case 'skins':
@@ -183,11 +187,14 @@ SteamConfig.prototype.save = async function save (name) {
   }
 }
 
+/**
+ *
+ */
 SteamConfig.prototype.saveApp = async function saveApp (appid) {
   let app = (this.steamapps.filter(app => app.AppState.appid === appid))[ 0 ] || undefined
 
   if (!app) {
-    throw new Error (`There is no app with the appid ${appid}`)
+    throw new Error(`There is no app with the appid ${appid}`)
   }
 
   if (!fs.existsSync(app.filePath)) {
@@ -201,16 +208,22 @@ SteamConfig.prototype.saveApp = async function saveApp (appid) {
   data.AppState.BytesDownloaded = app.AppState.BytesDownloaded
 }
 
-async function saveRegistry (steamConfig) {
-  const winreg = new Registry('HKCU\\Software\\Valve\\Steam')
-  if (steamConfig.os === 'darwin' || steamConfig.os === 'linux') {
-    await fs.writeFileAsync(steamConfig.getPath('registry'), TVDF.stringify(steamConfig.registry, true))
-  } else if (steamConfig.os === 'win32') {
-    winreg.set('language', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.language)
-    winreg.set('AutoLoginUser', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser)
-    winreg.set('RememberPassword', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.RememberPassword)
-    winreg.set('SkinV4', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.SkinV4)
+/**
+ * Attempt to set the root installation path to Steam.
+ * @method
+ * @param {Path} toPath - The path to set as the root to Steam.
+ * @throws {Error} - If the argument toPath is undefined or an empty 'string', or if toPath does not exist.
+ */
+SteamConfig.prototype.setRoot = function setRoot (toPath) {
+  if (!toPath || toPath === '') {
+    throw new Error(`Cannot set rootPath to an undefined/empty value: ${toPath}.`)
   }
+
+  if (!fs.existsSync(toPath)) {
+    throw new Error(`Cannot set rootPath to ${toPath} because it does not exist.`)
+  }
+
+  this.rootPath = toPath
 }
 
 /**
@@ -252,6 +265,35 @@ SteamConfig.prototype.detectRoot = function detectRoot () {
   }
 
   return detected
+}
+
+/**
+ * Attempt to set the current user based on an identifier (detected based on id64, accountId, PersonaName, or AccountName).
+ * @method
+ * @param {String} identifier - The value to detect as the user.
+ * @throws {Error} - If loginusers has not been loaded yet, or the user is not found, or there are multiple users found.
+ */
+SteamConfig.prototype.setUser = function setUser (identifier) {
+  if (!this.loginusers) {
+    throw new Error('loginusers.vdf must be loaded before a user can be set.')
+  }
+
+  let matched = Object.keys(this.loginusers.users).filter(user => {
+    return (user === identifier || this.loginusers.users[ user ].AccountName === identifier || this.loginusers.users[ user ].PersonaName === identifier)
+  })
+
+  if (matched.length === 0) {
+    throw new Error(`Couldn't find the user related to '${identifier}'.`)
+  } else if (matched.length > 1) {
+    throw new Error(`Found multiple users related to '${identifier}'; use something more specific to select the desired user such as their SteamID64.`)
+  } else {
+    this.user = {
+      accountId: '' + getAccountIdFromId64(matched[ 0 ]),
+      id64: matched[ 0 ],
+      accountName: this.loginusers.users[matched[ 0 ]].AccountName,
+      displayName: this.loginusers.users[matched[ 0 ]].PersonaName
+    }
+  }
 }
 
 /**
@@ -370,10 +412,10 @@ SteamConfig.prototype.logData = function logData (asType) {
   let logData = {}
 
   logData.rootPath = this.rootPath || null
-  logData.users = Object.keys(this.loginusers ? this.loginusers.users : []).length
-  logData.skins = this.skins || 0
-  logData.libraries = this.libraries || 0
-  logData.steamapps = this.steamapps || 0
+  logData.users = Object.keys(this.loginusers ? this.loginusers.users : [])
+  logData.skins = this.skins || []
+  logData.libraries = this.libraries || []
+  logData.steamapps = this.steamapps || []
   logData.appStatus = {
     okay: (this.steamapps ? this.steamapps : []).filter(item => {
       if (item.AppState.StateFlags === '4') {
@@ -401,10 +443,10 @@ SteamConfig.prototype.logData = function logData (asType) {
     accountId: this.user ? this.user.accountId : 0,
     accountName: this.user ? this.user.accountName : 'Hello',
     personaName: this.user ? this.user.displayName : 'World!',
-    level: this.localconfig ? this.localconfig.UserLocalConfigStore.Software.Valve.Steam.PlayerLevel : 'All of it',
-    owned: this.user ? this.user.owned : 'All of it',
-    categorized: Object.values(this.sharedconfig ? this.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps : []).filter(item => item.tags || item.Hidden || false),
-    shortcuts: this.shortcuts ? this.shortcuts.shortcuts.length : 'All of it'
+    level: this.localconfig && this.localconfig.UserLocalConfigStore.Software.Valve.Steam.PlayerLevel ? this.localconfig.UserLocalConfigStore.Software.Valve.Steam.PlayerLevel : '0/Limited',
+    owned: this.user && this.user.owned ? this.user.owned : [],
+    categorized: Object.values(this.sharedconfig && this.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps ? this.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps : []).filter(item => item.tags || item.Hidden || false),
+    shortcuts: this.shortcuts ? this.shortcuts.shortcuts : []
   }
   logData.provider = 'Brought to you by: A LOT of coffee'
 
@@ -416,7 +458,7 @@ SteamConfig.prototype.logData = function logData (asType) {
     logStr += `--- Root --> ${logData.rootPath}\n`
     logStr += '------------------ Steam Installation Status ------------------\n'
     logStr += 'Users\tSkins\tLibraries\tInstalled Apps\n'
-    logStr += `  ${logData.users}\t  ${logData.skins.length}\t  ${logData.libraries.length} + 1\t\t     ${logData.steamapps.length}\n`
+    logStr += `  ${logData.users.length}\t  ${logData.skins.length}\t  ${logData.libraries.length} + 1\t\t     ${logData.steamapps.length}\n`
     logStr += `--------------------- Installed App Status --------------------\n`
     logStr += `Playable    Update\tInstalling\tUseless\n`
     logStr += `   ${logData.appStatus.okay.length}\t       ${logData.appStatus.update.length}\t     ${logData.appStatus.installing.length}\t\t   ${logData.appStatus.useless.length}\n`
@@ -425,7 +467,7 @@ SteamConfig.prototype.logData = function logData (asType) {
     logStr += `${logData.currentUser.id64}\t${logData.currentUser.accountId}\t${logData.currentUser.accountName}\t  ${logData.currentUser.level}\n`
     logStr += `---------------------------------------------------------------\n`
     logStr += `Owned Apps\t  Categorized + Hidden\t  Shortcuts\n`
-    logStr += `   ${logData.currentUser.owned.length}\t\t\t  ${logData.currentUser.categorized.length}\t\t      ${logData.currentUser.shortcuts}\n`
+    logStr += `   ${logData.currentUser.owned.length}\t\t\t  ${logData.currentUser.categorized.length}\t\t      ${logData.currentUser.shortcuts.length}\n`
     logStr += `---------------------------------------------------------------\n`
     logStr += `-------------- Brought to you by: A LOT of coffee -------------`
 
@@ -548,6 +590,21 @@ function afterLoad (sc, name) {
 
     default:
       break
+  }
+}
+
+/*
+ *
+ */
+async function saveRegistry (steamConfig) {
+  const winreg = new Registry('HKCU\\Software\\Valve\\Steam')
+  if (steamConfig.os === 'darwin' || steamConfig.os === 'linux') {
+    await fs.writeFileAsync(steamConfig.getPath('registry'), TVDF.stringify(steamConfig.registry, true))
+  } else if (steamConfig.os === 'win32') {
+    winreg.set('language', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.language)
+    winreg.set('AutoLoginUser', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser)
+    winreg.set('RememberPassword', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.RememberPassword)
+    winreg.set('SkinV4', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.SkinV4)
   }
 }
 

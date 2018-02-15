@@ -18,8 +18,10 @@ async function run () {
   try {
     await testRequests()
 
-    sc.rootPath = sc.detectRoot()
+    sc.setRoot(sc.detectRoot())
     sc.appendToApps = true
+    await sc.load(paths.loginusers)
+    sc.setUser('l3l_aze')
     await sc.load(paths.all)
     await sc.load(sc.libraries.map(function mapLibs (lib) { return ['library', lib + '/steamapps'] }))
 

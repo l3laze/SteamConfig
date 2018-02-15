@@ -163,6 +163,10 @@ exports.requestOwnedApps = async function requestOwnedApps (id64, force = false,
     throw new Error(err)
   }
 
+  if (data.constructor !== Array) {
+    data = [data]
+  }
+
   return data
 }
 
