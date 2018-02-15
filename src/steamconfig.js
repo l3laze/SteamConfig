@@ -19,6 +19,10 @@ const BVDF = require('./../bvdf.js')
 
 const getAccountIdFromId64 = require('../steamdata-utils.js').getAccountIdFromId64
 
+const arch = require('os').arch()
+const os = require('os').platform()
+const homeDir = require('os').homedir()
+
 /**
  * @class
  * @name SteamConfig
@@ -47,9 +51,9 @@ function SteamConfig () {
   this.libraries = []
   this.appendToApps = false
 
-  this.arch = require('os').arch()
-  this.os = require('os').platform()
-  this.homeDir = require('os').homedir()
+  this.arch = arch
+  this.os = os
+  this.homeDir = homeDir
 
   this.appinfo = null
   this.config = null
@@ -161,6 +165,37 @@ SteamConfig.prototype.load = async function load (names) {
     } catch (err) {
       throw new Error(err)
     }
+  }
+}
+
+/**
+ *
+ */
+SteamConfig.prototype.save = async function save (name) {
+  if (!name || typeof name !== 'string') {
+    throw new Error(`Cannot save data for invalid path ${name}.`)
+  }
+
+  switch (name) {
+    case 'registry':
+      await saveRegistry(this)
+      break
+  }
+}
+
+SteamConfig.prototype.saveApp = async function saveApp (appid, data) {
+
+}
+
+async function saveRegistry (steamConfig) {
+  const winreg = new Registry('HKCU\\Software\\Valve\\Steam')
+  if (steamConfig.os === 'darwin' || steamConfig.os === 'linux') {
+    await fs.writeFileAsync(steamConfig.getPath('registry'), TVDF.stringify(steamConfig.registry, true))
+  } else if (steamConfig.os === 'win32') {
+    winreg.set('language', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.language)
+    winreg.set('AutoLoginUser', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser)
+    winreg.set('RememberPassword', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.RememberPassword)
+    winreg.set('SkinV4', steamConfig.registry.Registry.HKCU.Software.Valve.Steam.SkinV4)
   }
 }
 
@@ -443,10 +478,10 @@ async function loadSkins (folder) {
 }
 
 /**
- * Internal function to properly organize names array so that user-specific data is loaded last.
+ * Internal function to properly organize names array so that user-specific data is loaded/saved last.
  * @name prepareFileNames
  * @function
- * @param {Array} names - The Array of String|Array entries that [load](module-SteamConfig-SteamConfig.html#load) was called with.
+ * @param {Array} names - The Array of String|Array entries that [load](module-SteamConfig-SteamConfig.html#load) or [save](module-Steamconfig-SteamConfig.html#load) called with.
  * @return {Array} - The names Array, after organization.
  */
 function prepareFileNames (names) {

@@ -14,3 +14,5 @@ examples/catbackup\.json
 docs/
 
 examples/cache/
+
+test/cache/

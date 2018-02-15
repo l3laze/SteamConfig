@@ -43,13 +43,17 @@ exports.getAccountIdFromId64 = function getAccountIdFromId64 (id64) {
  * @returns {Array} - An Array of Strings that represent the apps genres on it's Store page.
  * @throws {Error} - If there is an error loading the page from the local cache or the internet, or scraping the internet data.
  */
-exports.requestGenres = async function requestGenres (appid, force = false, cache) {
+exports.requestGenres = async function requestGenres (appid, force = false, cache = {}) {
   if (!appid) {
     throw new Error('Need an appid to requestGenres.')
   }
 
   if (typeof appid === 'number') {
     appid = '' + appid
+  }
+
+  if (typeof appid !== 'string') {
+    throw new Error(`Invalid appid type for requestGenres: ${typeof appid}.`)
   }
 
   let data
@@ -120,13 +124,17 @@ exports.requestGenres = async function requestGenres (appid, force = false, cach
  * @returns {Array} - An Array of Objects that represent the user's owned apps.
  * @throws {Error} - If the user has not been defined yet, or there is an error reading from or writing to the cache, or there is an error loading the file from the internet, or there is an error parsing the data (XML) and converting it to JSON.
  */
-exports.requestOwnedApps = async function requestOwnedApps (id64, force = false, cache) {
+exports.requestOwnedApps = async function requestOwnedApps (id64, force = false, cache = {}) {
   if (!id64) {
     throw new Error('Need a user\'s SteamID64 to requestOwnedApps.')
   }
 
   if (typeof id64 === 'number') {
     id64 = '' + id64
+  }
+
+  if (typeof id64 !== 'string') {
+    throw new Error(`Invalid id64 type for requestOwnedApps: ${typeof id64}.`)
   }
 
   let data
@@ -167,12 +175,12 @@ exports.requestOwnedApps = async function requestOwnedApps (id64, force = false,
  * @returns {Array} - An Array of Strings that represents the popular tags on Steam.
  * @throws {Error} - If there is an error loading the tags list from the local cache or the internet.
  */
-exports.requestTags = async function requestTags (force = false, cache) {
+exports.requestTags = async function requestTags (force = false, cache = {}) {
   let data
   let cacheFile
 
   try {
-    if (cache.enabled && cache.folder) {
+    if (cache && cache.enabled && cache.folder) {
       if (!fs.existsSync(cache.folder)) {
         fs.mkdirSync(cache.folder)
       }
@@ -180,11 +188,11 @@ exports.requestTags = async function requestTags (force = false, cache) {
       cacheFile = path.join(cache.folder, `tags.json`)
     }
 
-    if (cache.enabled && (cache.folder && fs.existsSync(cache.folder)) && (cacheFile && fs.existsSync(cacheFile)) && !force) {
+    if (cache && cache.enabled && (cache.folder && fs.existsSync(cache.folder)) && (cacheFile && fs.existsSync(cacheFile)) && !force) {
       data = JSON.parse(await fs.readFileAsync(cacheFile))
-    } else if (force) {
+    } else {
       data = await fetch('https://store.steampowered.com/tagdata/populartags/english')
-      data = JSON.parse(data.text())
+      data = JSON.parse(await data.text())
 
       if (cache.enabled) {
         await fs.writeFileAsync(cacheFile, JSON.stringify(data))

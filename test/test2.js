@@ -155,33 +155,55 @@ describe('SteamConfig', function () {
     })
   })
 
-  describe('#steamdata-utils.getAccountIdFromId64 (id64)', function () {
-    it('should return a \'string\' that is the accountId', function () {
+  describe('#steamdata-utils.requestTags ()', function () {
+    it('should return an Array of \'objects\' that are {tagid: tag}', async function () {
       try {
-        let aid = utils.getAccountIdFromId64('76561198067577712')
+        let tags = await utils.requestTags(false, {enabled: true, folder: path.join(__dirname, 'cache')})
+        tags.should.be.a('array')
+      } catch (err) {
+        throw new Error(err)
+      }
+    })
+  })
 
-        if (typeof aid !== 'string') {
-          throw new Error(`Invalid return type from getAccountIdFromId64: ${typeof aid}.`)
-        }
-        if (aid !== '107311984') {
-          throw new Error(`Invalid return value from getAccountIdFromId64 for '76561198067577712': ${aid}. Should be '107311984'`)
-        }
+  describe('#steamdata-utils.requestGenres (appid)', function () {
+    it('should return an Array of \'strings\' that are the game\'s genres', async function () {
+      try {
+        let genres = await utils.requestGenres('218620', false, {enabled: true, folder: path.join(__dirname, 'cache')})
+        genres.should.be.a('array')
       } catch (err) {
         throw new Error(err)
       }
     })
 
-    it('should throw an error for an invalid argument', function () {
+    it('should throw an error for an invalid argument', async function () {
       try {
-        let aid = utils.getAccountIdFromId64('76561198067577712')
-        aid = utils.getAccountIdFromId64('dirtyhippie')
-
-        if (typeof aid !== 'string') {
-          throw new Error(`Invalid return type from getAccountIdFromId64: ${typeof aid}.`)
-        }
+        let genres = await utils.requestGenres({'PD2': '218620'}, false, {enabled: true, folder: path.join(__dirname, 'cache')}) // eslint-disable-line no-unused-vars
         throw new Error('It did not throw an error for an invalid argument.')
       } catch (err) {
-        if (err.message.indexOf('It did not throw an error for an invalid argument.') === -1 && err.message.indexOf('Invalid argument type for getAccountIdFromId64') === -1) {
+        if (err.message.indexOf('It did not throw an error for an invalid argument.' && err.message.indexOf('Invalid appid for requestGenres')) !== -1) {
+          throw new Error(err)
+        }
+      }
+    })
+  })
+
+  describe('#steamdata-utils.requestOwnedApps (id64)', function () {
+    it('should return an Array of \'objects\' that are the user\'s owned games', async function () {
+      try {
+        let games = await utils.requestOwnedApps('76561198067577712', false, {enabled: true, folder: path.join(__dirname, 'cache')})
+        games.should.be.a('array')
+      } catch (err) {
+        throw new Error(err)
+      }
+    })
+
+    it('should throw an error for an invalid argument', async function () {
+      try {
+        let games = await utils.requestOwnedApps({user: '8675309'}, false, {enabled: true, folder: path.join(__dirname, 'cache')}) // eslint-disable-line no-unused-vars
+        throw new Error('It did not throw an error for an invalid argument.')
+      } catch (err) {
+        if (err.message.indexOf('It did not throw an error for an invalid argument.' && err.message.indexOf('Invalid appid for requestGenres')) !== -1) {
           throw new Error(err)
         }
       }
@@ -192,46 +214,10 @@ describe('SteamConfig', function () {
     it('should return a \'string\' that is the accountId', function () {
       try {
         let aid = utils.getAccountIdFromId64('76561198067577712')
+        aid.should.be.a('string').and.equal('107311984')
 
-        if (typeof aid !== 'string') {
-          throw new Error(`Invalid return type from getAccountIdFromId64: ${typeof aid}.`)
-        }
-        if (aid !== '107311984') {
-          throw new Error(`Invalid return value from getAccountIdFromId64 for '76561198067577712': ${aid}. Should be '107311984'`)
-        }
-      } catch (err) {
-        throw new Error(err)
-      }
-    })
-
-    it('should throw an error for an invalid argument', function () {
-      try {
-        let aid = utils.getAccountIdFromId64('76561198067577712')
-        aid = utils.getAccountIdFromId64('dirtyhippie')
-
-        if (typeof aid !== 'string') {
-          throw new Error(`Invalid return type from getAccountIdFromId64: ${typeof aid}.`)
-        }
-        throw new Error('It did not throw an error for an invalid argument.')
-      } catch (err) {
-        if (err.message.indexOf('It did not throw an error for an invalid argument.') === -1 && err.message.indexOf('Invalid argument type for getAccountIdFromId64') === -1) {
-          throw new Error(err)
-        }
-      }
-    })
-  })
-
-  describe('#steamdata-utils.getAccountIdFromId64 (id64)', function () {
-    it('should return a \'string\' that is the accountId', function () {
-      try {
-        let aid = utils.getAccountIdFromId64('76561198067577712')
-
-        if (typeof aid !== 'string') {
-          throw new Error(`Invalid return type from getAccountIdFromId64: ${typeof aid}.`)
-        }
-        if (aid !== '107311984') {
-          throw new Error(`Invalid return value from getAccountIdFromId64 for '76561198067577712': ${aid}. Should be '107311984'`)
-        }
+        aid = utils.getAccountIdFromId64('76561198261241942')
+        aid.should.be.a('string').and.equal('300976214')
       } catch (err) {
         throw new Error(err)
       }
