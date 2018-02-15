@@ -183,8 +183,22 @@ SteamConfig.prototype.save = async function save (name) {
   }
 }
 
-SteamConfig.prototype.saveApp = async function saveApp (appid, data) {
+SteamConfig.prototype.saveApp = async function saveApp (appid) {
+  let app = (this.steamapps.filter(app => app.AppState.appid === appid))[ 0 ] || undefined
 
+  if (!app) {
+    throw new Error (`There is no app with the appid ${appid}`)
+  }
+
+  if (!fs.existsSync(app.filePath)) {
+    throw new Error(`The file ${app.filePath} does not exist. If it is on an external drive make sure it's properly plugged in and mounted.`)
+  }
+
+  let data = TVDF.parse(await fs.readFileAsync(app.filePath))
+  data.AppState.AutoUpdateBehavior = app.AppState.AutoUpdateBehavior
+  data.AppState.StateFlags = app.AppState.StateFlags
+  data.AppState.BytesToDownload = app.AppState.BytesToDownload
+  data.AppState.BytesDownloaded = app.AppState.BytesDownloaded
 }
 
 async function saveRegistry (steamConfig) {
