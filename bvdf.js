@@ -100,7 +100,7 @@ function parseAppInfo (data) {
         'entries': info
       })
     } catch (err) {
-      if (err.message.indexOf('Illegal offset') !== -1 && err.message.indexOf(len) !== -1) {
+      if ((err.message.indexOf('Index out of range') !== -1 || err.message.indexOf('Illegal offset') !== -1) && err.message.indexOf(len) !== -1) {
         // Ignore; parser doesn't handle EOF, so this is how it's handled.
         break
       } else {

@@ -167,7 +167,7 @@ SteamConfig.prototype.load = async function load (names) {
 
       afterLoad(this, name)
     } catch (err) {
-      throw new Error(err)
+      throw new Error(err.message += `; while load()ing '${name}'`)
     }
   }
 }
@@ -184,6 +184,13 @@ SteamConfig.prototype.save = async function save (name) {
     case 'registry':
       await saveRegistry(this)
       break
+
+    case 'localconfig':
+    case 'config':
+    case 'sharedconfig':
+    case 'loginusers':
+      await fs.writeFileAsync(this.getPath(name), TVDF.stringify(this[ name ], true))
+      break
   }
 }
 
@@ -194,7 +201,7 @@ SteamConfig.prototype.saveApp = async function saveApp (appid) {
   let app = (this.steamapps.filter(app => app.AppState.appid === appid))[ 0 ] || undefined
 
   if (!app) {
-    throw new Error(`There is no app with the appid ${appid}`)
+    throw new Error(`There is no app with the appid ${appid}.`)
   }
 
   if (!fs.existsSync(app.filePath)) {
@@ -278,8 +285,16 @@ SteamConfig.prototype.setUser = function setUser (identifier) {
     throw new Error('loginusers.vdf must be loaded before a user can be set.')
   }
 
+  if (typeof identifier !== 'number' && typeof identifier !== 'string') {
+    throw new Error(`Invalid identifier for setUser: ${typeof identifier}. Should be a 'number' or a 'string'.`)
+  } else if (typeof identifier === 'number') {
+    identifier = '' + identifier
+  }
+
+  let accountId
   let matched = Object.keys(this.loginusers.users).filter(user => {
-    return (user === identifier || this.loginusers.users[ user ].AccountName === identifier || this.loginusers.users[ user ].PersonaName === identifier)
+    accountId = getAccountIdFromId64(user)
+    return (user === identifier || accountId === identifier || this.loginusers.users[ user ].AccountName === identifier || this.loginusers.users[ user ].PersonaName === identifier)
   })
 
   if (matched.length === 0) {
@@ -288,7 +303,7 @@ SteamConfig.prototype.setUser = function setUser (identifier) {
     throw new Error(`Found multiple users related to '${identifier}'; use something more specific to select the desired user such as their SteamID64.`)
   } else {
     this.user = {
-      accountId: '' + getAccountIdFromId64(matched[ 0 ]),
+      accountId: accountId,
       id64: matched[ 0 ],
       accountName: this.loginusers.users[matched[ 0 ]].AccountName,
       displayName: this.loginusers.users[matched[ 0 ]].PersonaName
@@ -632,7 +647,7 @@ const SteamPaths = {
   libraryfolders: 'libraryfolders',
   localconfig: 'localconfig',
   loginusers: 'loginusers',
-  packageinfo: 'packageinfo',
+  // packageinfo: 'packageinfo',
   registry: 'registry',
   shortcuts: 'shortcuts',
   sharedconfig: 'sharedconfig',

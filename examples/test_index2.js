@@ -83,6 +83,7 @@ async function run () {
     console.info(`User's Owned Apps:\t${steamcon.user.owned.length}`)
     console.info(`User's Cat'd Apps:\t${Object.keys(steamcon.sharedconfig.UserRoamingConfigStore.Software.Valve.Steam.Apps).length}`)
     console.info(`Steam Tags:\t\t${steamcon.tags.length}`)
+    console.info(`Appinfo Entries:\t${steamcon.appinfo.length}`)
   } catch (err) {
     console.error(err)
     process.exit(1)

@@ -42,13 +42,38 @@ describe('SteamConfig', function () {
       }
     })
   })
+
+  describe('#setRoot (toPath)', function () {
+    it('should set SteamConfig.rootPath to the argument', function () {
+      try {
+        let detected = steam.detectRoot()
+        steam.setRoot(detected)
+        if (detected === null) {
+          throw new Error('Path to Steam was not found.')
+        }
+      } catch (err) {
+        throw new Error(err)
+      }
+    })
+
+    it('should throw an error for a non-existant or invalid argument', function () {
+      try {
+        steam.setRoot()
+        throw new Error('It did not throw an error for an invalid argument.')
+      } catch (err) {
+        if (err.message.indexOf('Cannot set rootPath to an undefined/empty value') === -1) {
+          throw new Error(err)
+        }
+      }
+    })
+  })
 })
 
 describe('SteamConfig', function () {
   beforeEach(function (done) {
     try {
       steam = new SteamConfig()
-      steam.rootPath = pathTo
+      steam.setRoot(pathTo)
       done()
     } catch (err) {
       done(err)
@@ -58,6 +83,35 @@ describe('SteamConfig', function () {
   afterEach(function (done) {
     steam = undefined
     done()
+  })
+
+  describe('#setUser (identifier)', function () {
+    it('should set the user based on the identifier argument', async function () {
+      try {
+        await steam.load(steamPaths.loginusers)
+        await steam.load(steamPaths.registry)
+        let user = steam.detectUser()
+        if (user === null && steam.registry.Registry.HKCU.Software.Valve.Steam.AutoLoginUser !== '') {
+          throw new Error('Failed to detect user, but one exists.')
+        }
+        steam.setUser(user.accountId)
+      } catch (err) {
+        throw new Error(err)
+      }
+    })
+
+    it('should throw an error for an invalid argument', async function () {
+      try {
+        await steam.load(steamPaths.loginusers)
+        await steam.load(steamPaths.registry)
+        steam.setUser('Batman')
+        throw new Error('It did not throw an error for an invalid argument.')
+      } catch (err) {
+        if (err.message.indexOf('Invalid identifier for setUser') !== -1) {
+          throw new Error(err)
+        }
+      }
+    })
   })
 
   describe('#detectUser ()', function () {
@@ -139,6 +193,34 @@ describe('SteamConfig', function () {
 
       steam.config.should.be.a('object').with.property('InstallConfigStore')
       steam.loginusers.should.be.a('object').with.property('users')
+    })
+
+    it('should be able to load everything in one call', async function () {
+      await steam.load([
+        steamPaths.registry,
+        steamPaths.loginusers
+      ])
+      steam.setUser(steam.detectUser().id64)
+      await steam.load([
+        steamPaths.appinfo,
+        steamPaths.config,
+        steamPaths.libraryfolders,
+        steamPaths.localconfig,
+        steamPaths.shortcuts,
+        steamPaths.sharedconfig,
+        steamPaths.skins,
+        steamPaths.steamapps
+      ])
+      steam.config.should.be.a('object').with.property('InstallConfigStore')
+      steam.loginusers.should.be.a('object').with.property('users')
+      steam.registry.should.be.a('object').with.property('Registry')
+      steam.libraryfolders.should.be.a('object').with.property('LibraryFolders')
+      steam.shortcuts.should.be.a('object').with.property('shortcuts')
+      steam.localconfig.should.be.a('object').with.property('UserLocalConfigStore')
+      steam.sharedconfig.should.be.a('object').with.property('UserRoamingConfigStore')
+      steam.skins.should.be.a('array')
+      steam.steamapps.should.be.a('array')
+      steam.appinfo.should.be.a('array')
     })
 
     it('should throw an error for an invalid argument', async function () {
