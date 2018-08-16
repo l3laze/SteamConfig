@@ -1,45 +1,28 @@
 {
   "name": "steamconfig",
-  "version": "0.0.2",
-  "main": "index.js",
-  "author": "Tom <l3l_aze@yahoo.com>",
-  "copyright": "Copyright © 2017 ${author}",
-  "description": "API to help read/write the Steam Client's configuration.",
-  "homepage": "https://github.com/l3laze/SteamConfig",
+  "version": "0.0.1-rc2",
+  "description": "A library to accompany the Steam-Data project https://github.com/l3laze/Steam-Data",
+  "main": "src/index.js",
+  "author": "Tom Shaver <l3l_aze@yahoo.com>",
   "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+github.com/l3laze/SteamConfig.git"
-  },
+  "files": [
+    "src/**/*"
+  ],
   "dependencies": {
-    "bluebird": "^3.5.1",
-    "bytebuffer": "^5.0.1",
-    "cuint": "^0.2.2",
-    "fast-xml-parser": "^3.0.1",
-    "node-fetch": "^2.0.0",
-    "rage-edit": "^1.0.2",
-    "simple-vdf2": "^1.1.1",
-    "web-request": "^1.0.7"
+    "cmdo": "^1.0.0-rc1",
+    "ebug": "^1.0.0-rc7",
+    "fast-xml-parser": "^3.12.0",
+    "node-fetch": "^2.2.0",
+    "simple-vdf2": "^1.2.1"
   },
   "devDependencies": {
-    "chai": "^4.1.2",
-    "cli": "^1.0.1",
-    "ink-docstrap": "^1.3.2",
-    "jsdoc": "^3.5.5",
-    "jsdock": "^1.0.4",
-    "markdox": "^0.1.10",
-    "mocha": "^5.0.0",
-    "standard": "^10.0.3",
-    "steam-dummy": "^0.0.1"
+    "standard": "^11.0.1"
   },
+  "repository": "https://github.com/l3laze/SteamConfig.git",
   "scripts": {
-    "lint": "yarn standard",
-    "test": "mocha test",
-    "full-test": "yarn lint && yarn test",
-    "jsdoc": "jsdoc -c .jsdoc.json -R README.md",
-    "jsdock": "jsdock build && jsdock publish",
-    "jsdoc-strap": "jsdoc -c .jsdoc.json -R README.md -t ./node_modules/ink-docstrap/template",
-    "markdox": "markdox src/steamconfig.js -o API.md && yarn fixmd",
-    "fixmd": "node fix_md_async.js -c steamConfig -m ./API.md -j ./src/steamconfig.js"
+    "repl": "node src/repl/index.js",
+    "test": "node tests/test.js",
+    "binaryKVtest": "node tests/binaryKVtest.js",
+    "debug": "DEBUG=Steam* node tests/test.js"
   }
 }

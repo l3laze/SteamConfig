@@ -1,18 +1,22 @@
 
+cache/
+
 node_modules/
+
+src/\.DS_Store
 
 \.DS_Store
 
-measure\.js
+\.history
 
-examples/data/
+yarn-error\.log
 
-test/Dummy/
+tests/appinfo\.json
 
-examples/catbackup\.json
+owned-76561198067577712\.json
 
-docs/
+storeData\.json
 
-examples/cache/
+tags\.json
 
-test/cache/
+tests/log\.txt
