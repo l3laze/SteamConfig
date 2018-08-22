@@ -7,6 +7,6 @@ const debug = require('ebug')(name)
 // To keep Standard from complaining because of the IIFE..
 ; // eslint-disable-line
 
-((function () {
+(function () {
   debug('Running %s', name)
-})())
+}()

@@ -8,7 +8,7 @@ const debug = require('ebug')(name)
 // To keep Standard from complaining because of the IIFE..
 ; // eslint-disable-line
 
-((async function () {
+(async function () {
   const SteamConfig = require('./../src/index.js')
 
   try {
@@ -46,4 +46,4 @@ const debug = require('ebug')(name)
     console.error(err)
     process.exit(1)
   }
-})())
+}())

@@ -98,7 +98,7 @@ function parseShortcuts (file) {
   return data
 }
 
-let SteamConfig = ((function () {
+let SteamConfig = (function () {
   let obj = {}
 
   obj.getPath = function (name) {
@@ -194,7 +194,7 @@ let SteamConfig = ((function () {
   obj.id64 = -1
   obj.accountId = -1
 
-  obj.rootPath = obj.getPath('root', obj.platform, obj.arch, '107311984')
+  obj.rootPath = obj.getPath('root', obj.platform, obj.arch, '')
 
   /*
    * append: Add loaded steamapps to internal list.
@@ -203,6 +203,6 @@ let SteamConfig = ((function () {
   obj.mode = 'append'
 
   return obj
-})())
+}())
 
 module.exports = SteamConfig

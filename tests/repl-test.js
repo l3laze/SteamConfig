@@ -5,7 +5,7 @@
 
 const path = require('path');
 
-((async function () {
+(async function () {
   const apps = await SteamConfig.requestOwnedApps('76561198067577712') // eslint-disable-line
   console.info(`Owned apps: ${apps.length}`)
   const storeData = []
@@ -19,4 +19,4 @@ const path = require('path');
   await Promise.all(storeData)
 
   require('fs').writeFileSync(path.join('./', 'requirements.html'))
-})())
+}())

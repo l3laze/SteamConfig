@@ -1,0 +1,40 @@
+# Build with NodeJS v# using architecture-specific instalallations
+environment:
+  yarn_version: '1.9.4'
+  matrix:
+  - nodejs_version: 8
+
+# Build using both 32-bit and 64-bit Windows.
+platform:
+  - x64
+  - x86
+
+# Because of this:
+#   https://help.github.com/articles/dealing-with-line-endings/
+init:
+  - git config --global core.autocrlf input
+
+install:
+  - ps: Install-Product node $env:nodejs_version $env:Platform
+  - npm i -g npm
+  - ps: Write-Host "Installing Yarn..."
+  - ps: (New-Object Net.WebClient).DownloadFile('https://github.com/yarnpkg/yarn/releases/download/v' + $env:yarn_version + '/yarn-' + $env:yarn_version + '.msi', "$env:temp\yarn-" + $env:yarn_version + ".msi")
+  - ps: cmd /c start /wait msiexec.exe /i $env:temp\yarn-$env:yarn_version.msi /quiet
+  - yarn --version
+  - yarn
+
+
+# Cache some dirs for faster build.
+cache:
+  - "%LOCALAPPDATA%\\Yarn"
+
+
+# Quiet-ish build.
+build:
+  verbosity: minimal
+
+
+# Run build (tests)
+build_script:
+  - yarn lint
+  - yarn test
